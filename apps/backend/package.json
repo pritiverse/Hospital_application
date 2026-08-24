@@ -2,9 +2,13 @@
   "name": "@healthcare/backend",
   "version": "1.0.0",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "start:worker": "node dist/queues/workers.js",
     "dev": "ts-node-dev --respawn src/server.ts",
     "dev:worker": "ts-node-dev --respawn src/queues/workers.ts",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "ts-node-dev prisma/seed.ts",
     "lint": "tsc --noEmit"
