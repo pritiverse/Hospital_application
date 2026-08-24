@@ -23,6 +23,9 @@ It streamlines clinical workflows by combining concurrency-safe slot reservation
 - [Database Schema and Models](#database-schema-and-models)
 - [Core Application Workflows](#core-application-workflows)
 - [Error Handling and Reliability](#error-handling-and-reliability)
+- [Google Calendar OAuth 2.0 Setup Guide](#google-calendar-oauth-20-setup-guide)
+- [LLM Prompt Engineering and Clinical Guidance](#llm-prompt-engineering-and-clinical-guidance)
+- [Deliverables Matrix](#deliverables-matrix)
 - [Testing and Quality Assurance](#testing-and-quality-assurance)
 - [Deployment Guidelines](#deployment-guidelines)
 - [Known Limitations](#known-limitations)
@@ -461,6 +464,108 @@ POST /api/admin/leaves (Atomic Prisma Transaction):
 - **Graceful AI Degradation**: If Google Gemini API is unavailable or returns an unexpected response, fallback summaries are generated seamlessly without interrupting clinical charting.
 - **Automatic Hold Expiration**: Expired `HELD` slots are automatically released during slot calculation queries.
 - **Resilient Background Retries**: Notification worker implements exponential backoff retries for transient SMTP or network failures.
+
+---
+
+## Google Calendar OAuth 2.0 Setup Guide
+
+CareSync integrates with Google Calendar API to synchronize confirmed appointments directly into patient and clinician calendar feeds.
+
+### Step 1: Create a Google Cloud Console Project
+1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Click **Create Project** and name it `CareSync-Healthcare`.
+
+### Step 2: Enable Google Calendar API
+1. In the sidebar, open **APIs & Services** > **Library**.
+2. Search for **Google Calendar API** and click **Enable**.
+
+### Step 3: Configure OAuth Consent Screen
+1. Navigate to **APIs & Services** > **OAuth consent screen**.
+2. Select User Type: **External** (or Internal for Google Workspace organizations).
+3. Fill in the App Name (`CareSync`) and developer contact email.
+4. Add the scope: `https://www.googleapis.com/auth/calendar.events`.
+5. Under **Test Users**, add your test Gmail accounts.
+
+### Step 4: Create OAuth 2.0 Client Credentials
+1. Go to **APIs & Services** > **Credentials** > **Create Credentials** > **OAuth client ID**.
+2. Application type: **Web application**.
+3. Name: `CareSync Web Client`.
+4. Authorized JavaScript origins: `http://localhost:8500` (and your production frontend domain).
+5. Authorized redirect URIs: `http://localhost:3001/api/calendar/callback` (and your production backend callback URL).
+6. Click **Create** and copy your **Client ID** and **Client Secret**.
+
+### Step 5: Add Credentials to `.env`
+Update your root `.env` file:
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/calendar/callback
+```
+
+---
+
+## LLM Prompt Engineering and Clinical Guidance
+
+CareSync utilizes Google Gemini 1.5 Flash for pre-visit clinical triage and post-visit patient communications with strict schema validation.
+
+### 1. Pre-Visit Triage Prompt (`previsit-v3`)
+
+**System Prompt:**
+```text
+You are a clinical decision-support assistant helping doctors prepare for patient consultations.
+Given a patient's symptom description, produce a structured pre-visit brief in JSON format.
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "urgency": "Low" | "Medium" | "High",
+  "chiefComplaint": "One sentence clinical framing of the primary complaint (max 200 chars)",
+  "suggestedQuestions": ["Question 1", "Question 2", "Question 3"],
+  "redFlags": ["Any red-flag symptoms if present, otherwise empty array"],
+  "missingInformation": ["Key omitted diagnostic context e.g. radiation, fever, onset speed, or empty array"]
+}
+```
+
+**Zod Validation Schema:**
+```typescript
+const PreVisitSchema = z.object({
+  urgency: z.enum(['Low', 'Medium', 'High']),
+  chiefComplaint: z.string().max(300),
+  suggestedQuestions: z.array(z.string()).length(3),
+  redFlags: z.array(z.string()).optional().default([]),
+  missingInformation: z.array(z.string()).optional().default([]),
+});
+```
+
+### 2. Post-Visit Patient Brief Prompt (`postvisit-v1`)
+
+**System Prompt:**
+```text
+You are a clinical communications assistant. You summarize a doctor's clinical visit notes into clear, patient-friendly language.
+Respond ONLY with valid JSON matching this schema:
+{
+  "summary": "Plain English summary of the consultation, diagnosis, and key takeaways for the patient (2-3 sentences)",
+  "medicationSchedule": [
+    { "medicine": "Medicine name", "instructions": "Plain English instructions on how and when to take it" }
+  ],
+  "followUp": "When or under what conditions to seek follow-up care"
+}
+```
+
+### 3. Graceful Failure and Fallback Strategy
+- **Timeouts**: Every Gemini API call is wrapped in a strict 10,000ms timeout.
+- **Schema Validation**: If response parsing fails, `PreVisitSummary.status` is marked as `INVALID_SCHEMA` and a deterministic heuristic fallback summary is returned.
+- **Consultation Continuity**: An LLM failure never blocks appointment confirmation or visit note persistence.
+
+---
+
+## Deliverables Matrix
+
+| Deliverable | Location in Repository | Description |
+| :--- | :--- | :--- |
+| **1. Source Code** | `apps/backend/`, `apps/frontend/`, `packages/shared/` | Complete monorepo source code for API, UI, queues, and database migrations. |
+| **2. Setup and Documentation** | `README.md`, `.env.example` | Comprehensive setup guide, environment specs, API reference, DB schema, and Google Calendar instructions. |
+| **3. Test Personas and Credentials** | `test_users.md` | Pre-seeded login credentials for patients, clinicians, and administrators. |
+| **4. System Design Write-Up** | `system_design.md` | Focused technical document (<800 words) covering double-booking prevention, leave conflict resolution, slot holds, and notification reliability. |
 
 ---
 
