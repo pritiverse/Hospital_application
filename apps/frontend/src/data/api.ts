@@ -116,4 +116,11 @@ export const api = {
     apiCall('/admin/leaves', { method: 'POST', body: JSON.stringify(data) }),
   getAdminNotifications: () => apiCall('/admin/notifications'),
   getAdminAuditLog: () => apiCall('/admin/audit'),
+  getAdminTelemetry: () => apiCall('/admin/telemetry'),
+
+  // Patient longitudinal health & medications
+  getPatientTimeline: () => apiCall('/patient/timeline'),
+  getPatientMedications: () => apiCall('/patient/medications'),
+  updateMedicationAdherence: (reminderId: string, status: 'TAKEN' | 'MISSED' | 'PENDING') =>
+    apiCall(`/patient/medications/${reminderId}/adherence`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };

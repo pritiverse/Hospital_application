@@ -218,12 +218,23 @@ export const getDoctorTodayQueue = async (doctorId: string) => {
     symptoms: appt.symptom?.rawText ?? '',
     hasVisit: !!appt.visit,
     aiSummary: appt.preVisitSummary
-      ? {
-          status: appt.preVisitSummary.status,
-          urgency: appt.preVisitSummary.urgency,
-          chiefComplaint: appt.preVisitSummary.chiefComplaint,
-          suggestedQuestions: appt.preVisitSummary.suggestedQuestions as string[],
-        }
+      ? (() => {
+          let missingInfo: string[] = [];
+          try {
+            if (appt.preVisitSummary.rawResponse) {
+              const parsed = JSON.parse(appt.preVisitSummary.rawResponse);
+              if (Array.isArray(parsed.missingInformation)) missingInfo = parsed.missingInformation;
+            }
+          } catch {}
+          return {
+            status: appt.preVisitSummary.status,
+            urgency: appt.preVisitSummary.urgency,
+            chiefComplaint: appt.preVisitSummary.chiefComplaint,
+            suggestedQuestions: (appt.preVisitSummary.suggestedQuestions as string[]) || [],
+            redFlags: (appt.preVisitSummary.redFlags as string[]) || [],
+            missingInformation: missingInfo,
+          };
+        })()
       : { status: 'FAILED' },
   }));
 };
@@ -423,18 +434,33 @@ function mapAppointment(appt: any) {
     severity: appt.symptom?.severity ?? null,
     durationDays: appt.symptom?.durationDays ?? null,
     aiSummary: appt.preVisitSummary
-      ? {
-          status: appt.preVisitSummary.status,
-          urgency: appt.preVisitSummary.urgency,
-          chiefComplaint: appt.preVisitSummary.chiefComplaint,
-          suggestedQuestions: appt.preVisitSummary.suggestedQuestions as string[],
-        }
+      ? (() => {
+          let missingInfo: string[] = [];
+          try {
+            if (appt.preVisitSummary.rawResponse) {
+              const parsed = JSON.parse(appt.preVisitSummary.rawResponse);
+              if (Array.isArray(parsed.missingInformation)) missingInfo = parsed.missingInformation;
+            }
+          } catch {}
+          return {
+            status: appt.preVisitSummary.status,
+            urgency: appt.preVisitSummary.urgency,
+            chiefComplaint: appt.preVisitSummary.chiefComplaint,
+            suggestedQuestions: (appt.preVisitSummary.suggestedQuestions as string[]) || [],
+            redFlags: (appt.preVisitSummary.redFlags as string[]) || [],
+            missingInformation: missingInfo,
+          };
+        })()
       : null,
+    diagnosis: appt.visit?.diagnosis ?? null,
+    followUpDate: appt.visit?.followUpDate ? appt.visit.followUpDate.toISOString() : null,
     postVisitSummary: appt.visit?.patientSummary ?? null,
     prescription: appt.visit?.prescriptionItems?.map((rx: any) => ({
+      id: rx.id,
       medicine: rx.medicineName,
       dosage: rx.dosage,
       frequency: rx.frequencyPerDay === 1 ? 'Once daily' : rx.frequencyPerDay === 2 ? 'Twice daily' : `${rx.frequencyPerDay}x daily`,
+      frequencyPerDay: rx.frequencyPerDay,
       duration: rx.durationDays,
       instructions: rx.instructions ?? '',
     })) ?? [],

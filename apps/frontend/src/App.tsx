@@ -5,6 +5,8 @@ import {
   BookAppointment,
   MyAppointments,
   AppointmentDetail,
+  HealthTimeline,
+  MyMedications,
   PatientNotifications,
   NotifIcon,
   NAV_ITEMS as PATIENT_NAV,
@@ -20,6 +22,7 @@ import {
   AdminDashboard,
   ManageDoctors,
   LeaveManagement,
+  SystemTelemetry,
   NotificationCenter,
   AuditLog,
   ADMIN_NAV,
@@ -206,7 +209,7 @@ export default function App() {
             {/* Patient screens */}
             {role === "patient" && patientView === "dashboard" && (
               <PatientDashboard
-                userName={firstName}
+                userName={user?.name ?? "there"}
                 onNavigate={setPatientView}
                 onSelectAppointment={(id) => { setSelectedAppointmentId(id); setPatientView("appointment-detail"); }}
               />
@@ -236,6 +239,17 @@ export default function App() {
                 }}
               />
             )}
+            {role === "patient" && patientView === "timeline" && (
+              <HealthTimeline
+                onBookFollowUp={(doctorId) => {
+                  if (doctorId) setSelectedDoctorId(doctorId);
+                  setPatientView("book");
+                }}
+              />
+            )}
+            {role === "patient" && patientView === "medications" && (
+              <MyMedications />
+            )}
             {role === "patient" && patientView === "appointment-detail" && (
               <AppointmentDetail appointmentId={selectedAppointmentId} onBack={() => setPatientView("appointments")} />
             )}
@@ -245,7 +259,7 @@ export default function App() {
 
             {/* Doctor screens */}
             {role === "doctor" && doctorView === "dashboard" && (
-              <DoctorDashboard userName={firstName} onNavigate={setDoctorView} />
+              <DoctorDashboard userName={user?.name ?? "Doctor"} onNavigate={setDoctorView} />
             )}
             {role === "doctor" && doctorView === "queue" && (
               <PatientQueue
@@ -264,6 +278,7 @@ export default function App() {
             {role === "admin" && adminView === "dashboard" && <AdminDashboard />}
             {role === "admin" && adminView === "doctors" && <ManageDoctors />}
             {role === "admin" && adminView === "leaves" && <LeaveManagement />}
+            {role === "admin" && adminView === "telemetry" && <SystemTelemetry />}
             {role === "admin" && adminView === "notifications" && <NotificationCenter />}
             {role === "admin" && adminView === "audit" && <AuditLog />}
 
@@ -404,6 +419,41 @@ function PatientDashboard({
           </button>
         </div>
       )}
+
+      {/* Quick Action Feature Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => onNavigate("timeline")}
+          className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all text-left flex items-start gap-4 group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3h12M2 8h8M2 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="12" cy="11" r="3" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#2563EB] transition-colors">Health Timeline & Care Summaries</h3>
+            <p className="text-xs text-[#94A3B8] mt-0.5">View your chronological consultation history, plain-language summaries, and doctor advice</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate("medications")}
+          className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all text-left flex items-start gap-4 group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <rect x="3" y="3" width="10" height="10" rx="5" stroke="currentColor" strokeWidth="1.5" transform="rotate(45 8 8)" />
+              <path d="M5.5 10.5l5-5" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-[#0F172A] text-sm group-hover:text-[#16A34A] transition-colors">Medication Adherence Tracker</h3>
+            <p className="text-xs text-[#94A3B8] mt-0.5">Check daily prescribed doses, food instructions, and log taken/missed medications</p>
+          </div>
+        </button>
+      </div>
 
       {/* Recent visits */}
       {recent.length > 0 && (

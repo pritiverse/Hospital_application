@@ -730,7 +730,225 @@ export default function AdminPortal() {
   );
 }
 
-export const ADMIN_NAV = [
+// ── System & Worker Telemetry HUD ─────────────────────────────────────────────
+function SystemTelemetry() {
+  const [telemetry, setTelemetry] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+
+  const fetchTelemetry = () => {
+    setLoading(true);
+    api.getAdminTelemetry()
+      .then((data) => {
+        setTelemetry(data);
+        setLastRefreshed(new Date());
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading && !telemetry) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <h1 className="text-2xl font-semibold text-[#0F172A]">Worker Telemetry & Integrations</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton h-36 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const { queues, dbStatus, uptimeSeconds } = telemetry || {
+    queues: {
+      email: { total: 0, pending: 0, sent: 0, retrying: 0, failed: 0, healthScore: 100 },
+      calendarSync: { synced: 0, pending: 0, failed: 0 },
+      aiTriage: { success: 0, pending: 0, invalidSchema: 0, failed: 0, successRate: 100 },
+    },
+    dbStatus: "CONNECTED",
+    uptimeSeconds: 0,
+  };
+
+  const formatUptime = (sec: number) => {
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${d > 0 ? `${d}d ` : ""}${h}h ${m}m`;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#0F172A]">System Telemetry & Background Queues</h1>
+          <p className="text-sm text-[#94A3B8] mt-1">Live observability over asynchronous BullMQ workers, third-party APIs, and DB connection</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[#94A3B8]">
+            Updated {lastRefreshed.toLocaleTimeString()}
+          </span>
+          <button
+            onClick={fetchTelemetry}
+            className="px-3 py-1.5 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-xs font-medium text-[#475569] rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M14 8A6 6 0 118 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Top Status Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-xs text-[#94A3B8]">PostgreSQL State</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse" />
+            <span className="text-sm font-semibold text-[#0F172A]">{dbStatus}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-xs text-[#94A3B8]">Backend Uptime</p>
+          <p className="text-sm font-semibold text-[#0F172A] mt-1">{formatUptime(uptimeSeconds)}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-xs text-[#94A3B8]">Email Delivery Health</p>
+          <p className="text-sm font-semibold text-[#16A34A] mt-1">{queues.email.healthScore}% OK</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-xs text-[#94A3B8]">AI Triage Reliability</p>
+          <p className="text-sm font-semibold text-[#2563EB] mt-1">{queues.aiTriage.successRate}% Parsed</p>
+        </div>
+      </div>
+
+      {/* Detailed Queue Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Email Worker */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center text-[#2563EB]">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M2 5l6 4.5L14 5" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0F172A]">Email Notification Queue</h3>
+                <p className="text-xs text-[#94A3B8]">BullMQ / Nodemailer</p>
+              </div>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#F1F5F9] text-xs">
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Sent</span>
+              <span className="text-sm font-bold text-[#16A34A]">{queues.email.sent}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Pending</span>
+              <span className="text-sm font-bold text-[#D97706]">{queues.email.pending}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Retrying</span>
+              <span className="text-sm font-bold text-[#2563EB]">{queues.email.retrying}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Dead-Letter / Failed</span>
+              <span className="text-sm font-bold text-[#DC2626]">{queues.email.failed}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Google Calendar Sync */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#DCFCE7] flex items-center justify-center text-[#16A34A]">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <rect x="2" y="2.5" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M2 6h12M5 1.5v3M11 1.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0F172A]">Google Calendar Sync</h3>
+                <p className="text-xs text-[#94A3B8]">OAuth 2.0 Service</p>
+              </div>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#F1F5F9] text-xs">
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Synced</span>
+              <span className="text-sm font-bold text-[#16A34A]">{queues.calendarSync.synced}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Pending</span>
+              <span className="text-sm font-bold text-[#D97706]">{queues.calendarSync.pending}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Failed</span>
+              <span className="text-sm font-bold text-[#DC2626]">{queues.calendarSync.failed}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Gemini Generative AI */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#FEF3C7] flex items-center justify-center text-[#D97706]">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1.5l1.8 3.8L14 6l-3.2 2.8.8 4.2L8 10.8 4.4 13l.8-4.2L2 6l4.2-.7L8 1.5z" fill="currentColor" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0F172A]">Gemini 1.5 Flash Triage</h3>
+                <p className="text-xs text-[#94A3B8]">Zod Schema Validated</p>
+              </div>
+            </div>
+            <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#F1F5F9] text-xs">
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Success</span>
+              <span className="text-sm font-bold text-[#16A34A]">{queues.aiTriage.success}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Pending</span>
+              <span className="text-sm font-bold text-[#D97706]">{queues.aiTriage.pending}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Schema Fallback</span>
+              <span className="text-sm font-bold text-[#475569]">{queues.aiTriage.invalidSchema}</span>
+            </div>
+            <div className="p-2.5 bg-[#F8FAFC] rounded-lg">
+              <span className="text-[#64748B] block">Failed API</span>
+              <span className="text-sm font-bold text-[#DC2626]">{queues.aiTriage.failed}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Portal Root ────────────────────────────────────────────────────────
+const ADMIN_NAV = [
   {
     id: "dashboard",
     label: "Dashboard",
@@ -766,6 +984,18 @@ export const ADMIN_NAV = [
     ),
   },
   {
+    id: "telemetry",
+    label: "Worker Telemetry",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <circle cx="12" cy="4" r="1.5" fill="currentColor" />
+        <circle cx="9" cy="8" r="1.5" fill="currentColor" />
+        <circle cx="6" cy="12" r="1.5" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
     id: "notifications",
     label: "Notifications",
     icon: (
@@ -787,4 +1017,4 @@ export const ADMIN_NAV = [
   },
 ];
 
-export { AdminDashboard, ManageDoctors, LeaveManagement, NotificationCenter, AuditLog };
+export { AdminDashboard, ManageDoctors, LeaveManagement, SystemTelemetry, NotificationCenter, AuditLog, ADMIN_NAV };

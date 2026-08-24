@@ -38,7 +38,7 @@ function DoctorDashboard({
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#0F172A]">{greeting}, Dr. {userName}</h1>
+          <h1 className="text-2xl font-semibold text-[#0F172A]">{greeting}, {userName.startsWith("Dr.") ? userName : `Dr. ${userName}`}</h1>
           <p className="text-sm text-[#94A3B8] mt-0.5">{todayStr}</p>
         </div>
         <button
@@ -244,9 +244,53 @@ function VisitForm({
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const patientName = queueItem?.patient || "Patient";
   const appointmentTime = queueItem?.time || "Today";
+
+  // Restore draft notes from localStorage if available
+  useEffect(() => {
+    if (!queueItem?.id) return;
+    const savedDraft = localStorage.getItem(`cs_draft_${queueItem.id}`);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.notes) setNotes(parsed.notes);
+        if (parsed.diagnosis) setDiagnosis(parsed.diagnosis);
+        if (parsed.followUp) setFollowUp(parsed.followUp);
+        if (parsed.prescription && parsed.prescription.length > 0) setPrescription(parsed.prescription);
+        if (parsed.editedSummary) setEditedSummary(parsed.editedSummary);
+      } catch {}
+    }
+  }, [queueItem?.id]);
+
+  // Debounced auto-save to localStorage
+  useEffect(() => {
+    if (!queueItem?.id) return;
+    const timer = setTimeout(() => {
+      localStorage.setItem(
+        `cs_draft_${queueItem.id}`,
+        JSON.stringify({ notes, diagnosis, followUp, prescription, editedSummary })
+      );
+      setDraftSaved(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [notes, diagnosis, followUp, prescription, editedSummary, queueItem?.id]);
+
+  const PRESET_MEDS: PrescriptionItem[] = [
+    { medicine: "Amoxicillin", dosage: "500mg", frequency: "Three times daily", frequencyPerDay: 3, duration: "7", instructions: "Take after meals with full glass of water" },
+    { medicine: "Paracetamol", dosage: "650mg", frequency: "Twice daily", frequencyPerDay: 2, duration: "3", instructions: "Take after meals as needed for fever/pain" },
+    { medicine: "Omeprazole", dosage: "20mg", frequency: "Once daily", frequencyPerDay: 1, duration: "14", instructions: "Take 30 minutes before breakfast" },
+    { medicine: "Cetirizine", dosage: "10mg", frequency: "Once daily", frequencyPerDay: 1, duration: "5", instructions: "Take once daily at bedtime" },
+  ];
+
+  const applyPreset = (preset: PrescriptionItem) => {
+    setPrescription((prev) => {
+      const filtered = prev.filter((p) => p.medicine.trim() !== "");
+      return [...filtered, { ...preset }];
+    });
+  };
 
   const addItem = () =>
     setPrescription([
@@ -283,7 +327,7 @@ function VisitForm({
       } If symptoms worsen or severe issues occur, please seek prompt medical attention.`;
       setSummary(generated);
       setEditedSummary(generated);
-    }, 1200);
+    }, 1000);
   };
 
   const handleSaveVisit = async () => {
@@ -318,6 +362,8 @@ function VisitForm({
         prescription: rxPayload,
       });
 
+      // Clear draft on success
+      localStorage.removeItem(`cs_draft_${queueItem.id}`);
       setSent(true);
     } catch (err: any) {
       setError(err.message || "Failed to record visit.");
@@ -337,13 +383,13 @@ function VisitForm({
         </div>
         <h2 className="text-lg font-semibold text-[#0F172A] mb-2">Visit Recorded & Completed</h2>
         <p className="text-sm text-[#94A3B8] mb-6">
-          The clinical notes and prescriptions have been updated for {patientName}.
+          The clinical notes, follow-up, and prescriptions have been saved for {patientName}.
         </p>
         <button
           onClick={onDone}
-          className="px-6 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-medium rounded-xl transition-colors"
+          className="px-6 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
-          Return to Queue
+          Return to Patient Queue →
         </button>
       </div>
     );
@@ -351,16 +397,22 @@ function VisitForm({
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <button onClick={onDone} className="text-[#94A3B8] hover:text-[#475569]">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <h1 className="text-xl font-semibold text-[#0F172A]">Visit — {patientName}</h1>
-          <span className="text-sm text-[#94A3B8]">{appointmentTime}</span>
+          <h1 className="text-xl font-semibold text-[#0F172A]">Clinical Consultation — {patientName}</h1>
+          <span className="text-sm text-[#94A3B8]">({appointmentTime})</span>
         </div>
+        {draftSaved && (
+          <span className="text-xs text-[#16A34A] flex items-center gap-1 font-medium bg-[#DCFCE7] px-2.5 py-1 rounded-full animate-fade-in">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="#16A34A"/><path d="M2.5 5l2 2 3-3" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            Draft auto-saved
+          </span>
+        )}
       </div>
 
       {error && (
@@ -373,15 +425,15 @@ function VisitForm({
         {/* Left: Clinical notes */}
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <h3 className="text-sm font-semibold text-[#475569] mb-4">Clinical Notes</h3>
+            <h3 className="text-sm font-semibold text-[#475569] mb-4">Clinical Findings & Diagnosis</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-[#475569] block mb-1.5">Clinical notes & findings</label>
+                <label className="text-xs font-medium text-[#475569] block mb-1.5">Clinical notes & examination findings</label>
                 <textarea
                   rows={5}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Examination findings, vital observations, history…"
+                  placeholder="Examination findings, vital observations, clinical rationale…"
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB] resize-none"
                 />
               </div>
@@ -391,12 +443,12 @@ function VisitForm({
                   type="text"
                   value={diagnosis}
                   onChange={(e) => setDiagnosis(e.target.value)}
-                  placeholder="e.g. Acute bronchitis, Hypertension stage 1"
+                  placeholder="e.g. Acute bronchitis, Hypertension stage 1, Lumbar radiculopathy"
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-[#475569] block mb-1.5">Follow-up date</label>
+                <label className="text-xs font-medium text-[#475569] block mb-1.5">Recommended Follow-up Date (Optional)</label>
                 <input
                   type="date"
                   value={followUp}
@@ -410,7 +462,28 @@ function VisitForm({
 
           {/* Prescription */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <h3 className="text-sm font-semibold text-[#475569] mb-4">Prescription Builder</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[#475569]">Prescription Builder</h3>
+              <span className="text-xs text-[#94A3B8]">Auto-schedules daily reminders</span>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="mb-4 p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
+              <p className="text-[11px] font-semibold text-[#64748B] mb-2 uppercase tracking-wider">Quick Prescription Presets:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_MEDS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => applyPreset(p)}
+                    className="px-2.5 py-1 bg-white hover:bg-[#EFF6FF] text-[#2563EB] text-xs font-medium rounded-lg transition-colors border border-[#BFDBFE] shadow-2xs"
+                  >
+                    + {p.medicine} ({p.dosage})
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3">
               {prescription.map((item, i) => (
                 <div key={i} className="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] space-y-2">

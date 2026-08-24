@@ -148,7 +148,13 @@ export function AiSummaryCard({
   title = "AI Pre-Visit Summary",
   fallbackSymptoms,
 }: {
-  data?: { urgency?: string; chiefComplaint?: string; suggestedQuestions?: string[] };
+  data?: {
+    urgency?: string;
+    chiefComplaint?: string;
+    suggestedQuestions?: string[];
+    redFlags?: string[];
+    missingInformation?: string[];
+  };
   status: string;
   title?: string;
   fallbackSymptoms?: string;
@@ -190,44 +196,81 @@ export function AiSummaryCard({
   }
 
   return (
-    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 animate-fade-in">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded bg-[#EFF6FF] flex items-center justify-center">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 1l1.5 3H11l-2.5 2 1 3L6 7.5 2.5 9l1-3L1 4h3.5L6 1z" fill="#2563EB" />
-          </svg>
-        </div>
-        <span className="text-xs font-semibold text-[#475569] uppercase tracking-wide">{title}</span>
-      </div>
-      <div className="space-y-3">
+    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 animate-fade-in space-y-3.5">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#475569]">Urgency</span>
+          <div className="w-5 h-5 rounded bg-[#EFF6FF] flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1l1.5 3H11l-2.5 2 1 3L6 7.5 2.5 9l1-3L1 4h3.5L6 1z" fill="#2563EB" />
+            </svg>
+          </div>
+          <span className="text-xs font-semibold text-[#475569] uppercase tracking-wide">{title}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-[#64748B]">Triage Urgency:</span>
           <StatusBadge status={data?.urgency ?? "Low"} size="xs" />
         </div>
-        <div>
-          <p className="text-xs text-[#94A3B8] mb-1">Chief complaint</p>
-          <p className="text-sm text-[#0F172A]">{data?.chiefComplaint}</p>
-        </div>
-        {data?.suggestedQuestions && data.suggestedQuestions.length > 0 && (
-          <div>
-            <p className="text-xs text-[#94A3B8] mb-1.5">Suggested questions</p>
-            <ol className="space-y-1">
-              {data.suggestedQuestions.map((q, i) => (
-                <li key={i} className="text-sm text-[#334155] flex gap-2">
-                  <span className="text-[#94A3B8] flex-shrink-0">{i + 1}.</span>
-                  <span>{q}</span>
-                </li>
-              ))}
-            </ol>
+      </div>
+
+      <div>
+        <p className="text-xs font-medium text-[#64748B] mb-0.5">Clinical Chief Complaint</p>
+        <p className="text-sm font-medium text-[#0F172A]">{data?.chiefComplaint}</p>
+      </div>
+
+      {data?.missingInformation && data.missingInformation.length > 0 && (
+        <div className="p-3 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+          <div className="flex items-center gap-1.5 mb-1">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="#2563EB" strokeWidth="1.5" />
+              <path d="M8 5v4M8 11.5v.5" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span className="text-xs font-semibold text-[#1E40AF]">Missing / Clarifying Clinical Context</span>
           </div>
-        )}
-        <div className="flex items-center gap-1.5 pt-1 border-t border-[#E2E8F0]">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 1.5A4.5 4.5 0 116 10.5 4.5 4.5 0 016 1.5z" stroke="#94A3B8" strokeWidth="1" />
-            <path d="M6 5v3M6 4.5v-.5" stroke="#94A3B8" strokeWidth="1" strokeLinecap="round" />
-          </svg>
-          <p className="text-[11px] text-[#94A3B8]">AI-generated — reviewed by your doctor before the visit</p>
+          <ul className="text-xs text-[#1E3A8A] space-y-0.5 pl-4 list-disc">
+            {data.missingInformation.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         </div>
+      )}
+
+      {data?.redFlags && data.redFlags.length > 0 && (
+        <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-lg">
+          <div className="flex items-center gap-1.5 mb-1">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2l6 12H2L8 2z" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8 7v3M8 11.5v.5" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span className="text-xs font-semibold text-[#991B1B]">Potential Red Flags Identified</span>
+          </div>
+          <ul className="text-xs text-[#991B1B] space-y-0.5 pl-4 list-disc">
+            {data.redFlags.map((flag, i) => (
+              <li key={i}>{flag}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {data?.suggestedQuestions && data.suggestedQuestions.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-[#64748B] mb-1.5">Suggested Doctor Probing Questions</p>
+          <ol className="space-y-1">
+            {data.suggestedQuestions.map((q, i) => (
+              <li key={i} className="text-xs text-[#334155] flex gap-2">
+                <span className="text-[#94A3B8] font-semibold flex-shrink-0">{i + 1}.</span>
+                <span>{q}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 pt-2 border-t border-[#E2E8F0]">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1.5A4.5 4.5 0 116 10.5 4.5 4.5 0 016 1.5z" stroke="#94A3B8" strokeWidth="1" />
+          <path d="M6 5v3M6 4.5v-.5" stroke="#94A3B8" strokeWidth="1" strokeLinecap="round" />
+        </svg>
+        <p className="text-[11px] text-[#94A3B8]">Assistive pre-visit triage · Doctor confirms clinical relevance</p>
       </div>
     </div>
   );

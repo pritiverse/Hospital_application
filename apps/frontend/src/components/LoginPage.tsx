@@ -3,13 +3,6 @@ import { api, saveAuthUser } from "../data/api";
 
 type Role = "patient" | "doctor" | "admin";
 
-// Demo credentials that match the seed data in apps/backend/prisma/seed.ts
-const ROLE_CREDENTIALS: Record<Role, { email: string; password: string }> = {
-  patient: { email: "patient@example.com", password: "password" },
-  doctor:  { email: "doctor@example.com",  password: "password" },
-  admin:   { email: "admin@example.com",   password: "password" },
-};
-
 const ROLE_META: Record<Role, {
   label: string;
   tagline: string;
@@ -63,7 +56,7 @@ const ROLE_META: Record<Role, {
         <path d="M14 8v6l4 2" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    features: ["Doctor & leave management", "Notification center with retry log", "Full audit trail"],
+    features: ["Doctor & leave management", "Worker telemetry & observability", "Full audit trail"],
   },
 };
 
@@ -88,7 +81,7 @@ export default function LoginPage({
   onLogin: (role: Role, user: { id: string; name: string; email: string }) => void;
 }) {
   const [activeRole, setActiveRole] = useState<Role>("patient");
-  const [email, setEmail] = useState(ROLE_CREDENTIALS.patient.email);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -99,7 +92,7 @@ export default function LoginPage({
 
   const handleRoleSwitch = (role: Role) => {
     setActiveRole(role);
-    setEmail(ROLE_CREDENTIALS[role].email);
+    setEmail("");
     setPassword("");
     setError("");
     setTouched(false);
@@ -108,27 +101,23 @@ export default function LoginPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (!email || !password) return;
+    if (!email.trim() || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
     setError("");
     setLoading(true);
 
     try {
-      const result = await api.login({ email, password });
-      // result = { user: { id, name, email, role }, token }
+      const result = await api.login({ email: email.trim(), password });
       saveAuthUser(result);
       const role = mapRole(result.user.role);
       onLogin(role, { id: result.user.id, name: result.user.name, email: result.user.email });
     } catch (err: any) {
-      setError(err.message || "Login failed. Check your credentials.");
+      setError(err.message || "Login failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = () => {
-    setEmail(ROLE_CREDENTIALS[activeRole].email);
-    setPassword(ROLE_CREDENTIALS[activeRole].password);
-    setError("");
   };
 
   return (
@@ -166,7 +155,7 @@ export default function LoginPage({
             </div>
           </div>
           {/* Bottom note */}
-          <p className="text-xs text-white/40 mt-10">Demo project · Educational use only · Not HIPAA‑compliant</p>
+          <p className="text-xs text-white/40 mt-10">CareSync Health System · Secure Clinical Access</p>
         </section>
 
         {/* Right side – login form */}
@@ -214,7 +203,7 @@ export default function LoginPage({
                   autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                  placeholder="you@example.com"
+                  placeholder="name@example.com"
                   className={`w-full pl-10 pr-4 py-3 border rounded-xl text-sm text-[#0F172A] focus:outline-none focus:ring-2 transition-all ${
                     touched && !email ? "border-[#DC2626] focus:ring-[#DC2626]/20" : "border-[#E2E8F0] focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
                   }`}
@@ -226,9 +215,6 @@ export default function LoginPage({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-[#475569] uppercase tracking-wide">Password</label>
-                <button type="button" onClick={fillDemo} className="text-xs font-medium hover:underline" style={{ color: meta.accent }}>
-                  Fill demo credentials
-                </button>
               </div>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]">
@@ -288,23 +274,8 @@ export default function LoginPage({
             </button>
           </form>
 
-          {/* Demo credentials hint */}
-          <div className="mt-6 p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
-            <p className="text-xs font-semibold text-[#475569] mb-2 uppercase tracking-wide">Demo credentials</p>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#94A3B8]">Email</span>
-                <code className="text-[#334155] font-mono bg-white border border-[#E2E8F0] px-2 py-0.5 rounded">{ROLE_CREDENTIALS[activeRole].email}</code>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#94A3B8]">Password</span>
-                <code className="text-[#334155] font-mono bg-white border border-[#E2E8F0] px-2 py-0.5 rounded">{ROLE_CREDENTIALS[activeRole].password}</code>
-              </div>
-            </div>
-          </div>
-
           {/* Switch portal link */}
-          <p className="text-center text-xs text-[#CBD5E1] mt-6">
+          <p className="text-center text-xs text-[#CBD5E1] mt-8">
             Not your portal?{' '}
             {PORTAL_TABS.filter((t) => t.role !== activeRole).map((t, i, arr) => (
               <span key={t.role}>

@@ -1,12 +1,12 @@
 # CareSync — Healthcare Appointment & Follow-Up Management System
 
-CareSync is a full-stack, enterprise-grade healthcare management and scheduling platform built with **React**, **Node.js / Express**, **Prisma ORM**, **PostgreSQL**, **BullMQ**, and **Google Gemini Generative AI**. 
+CareSync is an enterprise-grade healthcare management and clinical scheduling platform built with React, Node.js, Express, Prisma ORM, PostgreSQL, BullMQ, and Google Gemini Generative AI.
 
-It streamlines patient-doctor workflows by combining double-booking-proof slot reservation, AI-powered pre-visit symptom triage, doctor consultation and prescription tracking, automated medication reminders, and administrative operations management into a unified, role-based application.
+It streamlines clinical workflows by combining concurrency-safe slot reservations, AI-assisted pre-visit symptom triage, clinical gap detection, doctor consultation recording with crash-resilient charting, automated medication adherence tracking, and background worker telemetry into a unified, role-based application.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Key Features](#key-features)
@@ -14,16 +14,16 @@ It streamlines patient-doctor workflows by combining double-booking-proof slot r
 - [System Architecture](#system-architecture)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
-- [Installation & Setup](#installation--setup)
+- [Installation and Setup](#installation-and-setup)
 - [Environment Configuration](#environment-configuration)
 - [Running the Application](#running-the-application)
+- [Test Accounts and Credentials](#test-accounts-and-credentials)
 - [API Documentation](#api-documentation)
-- [Authentication & Authorization](#authentication--authorization)
-- [Database Schema & Models](#database-schema--models)
+- [Authentication and Authorization](#authentication-and-authorization)
+- [Database Schema and Models](#database-schema-and-models)
 - [Core Application Workflows](#core-application-workflows)
-- [Error Handling & Reliability](#error-handling--reliability)
-- [Security Features](#security-features)
-- [Testing & Quality Assurance](#testing--quality-assurance)
+- [Error Handling and Reliability](#error-handling-and-reliability)
+- [Testing and Quality Assurance](#testing-and-quality-assurance)
 - [Deployment Guidelines](#deployment-guidelines)
 - [Known Limitations](#known-limitations)
 - [Future Roadmap](#future-roadmap)
@@ -31,65 +31,69 @@ It streamlines patient-doctor workflows by combining double-booking-proof slot r
 
 ---
 
-## 🌟 Overview
+## Overview
 
-Modern outpatient clinics often suffer from double-booking errors, disjointed symptom collection, lack of structured post-consultation follow-up, and manual leave-conflict resolution. 
+Outpatient healthcare systems often face operational friction due to double-booking conflicts, unguided symptom collection, fragmented follow-up care, and lack of visibility into asynchronous background processes.
 
-**CareSync addresses these pain points through:**
-- **Guaranteed Concurrency Control**: Strict database-level uniqueness constraints and short-term slot holding prevent double-bookings under concurrent user requests.
-- **AI-Powered Clinical Decision Support**: Seamlessly analyzes raw patient symptom descriptions before consultations to highlight urgency, clinical framing, red-flag indicators, and suggested diagnostic questions.
-- **End-to-End Visit Recording**: Doctors document diagnoses, clinical notes, and structured prescriptions, which automatically generate patient-friendly summaries and scheduled medication reminder queues.
-- **Operational Leave & Conflict Management**: Administrators can manage clinic doctors, schedule leaves with automated conflict detection, and automatically notify affected patients.
-
----
-
-## ✨ Key Features
-
-### 👤 Patient Experience
-- **Doctor Directory & Real-Time Availability**: Search and filter doctors by specialization, view profiles, and browse real-time available time slots computed from doctor working hours and scheduled leaves.
-- **5-Minute Slot Hold Reservation**: Hold a slot for 5 minutes during intake checkout with a live countdown timer before confirmation.
-- **Pre-Visit Symptom Intake**: Describe symptoms, severity level, and duration before the consultation.
-- **AI-Generated Pre-Visit Brief**: Real-time feedback with clinical framing, urgency assessment, and health guidance.
-- **Google Calendar Synchronization**: Synchronize confirmed appointments directly into Google Calendar via OAuth 2.0.
-- **Appointment Management**: View upcoming, completed, and historical appointments with instant reschedule and cancellation capabilities.
-- **Notification Inbox**: Receive automated updates for booking confirmations, doctor leave cancellations, and schedule adjustments.
-
-### 🩺 Doctor Portal
-- **Daily Queue Dashboard**: Real-time overview of today's scheduled consultations, patient statuses, and timing.
-- **Clinical Pre-Visit Briefs**: View AI-generated summaries for each patient, including chief complaint, urgency level (Low/Medium/High), red flags, and 3 suggested consultation questions.
-- **Consultation & Prescription Recorder**: Record clinical notes, diagnoses, follow-up dates, and structured prescription items (dosage, frequency, duration).
-- **Automated Post-Visit Summaries**: AI translates complex clinical notes into plain-language patient summaries.
-- **Automated Medication Reminders**: Automatically generates scheduled daily dose reminder records across prescription durations.
-- **Working Hours & Availability Management**: Configure weekly schedule hours (start/end times per day of week) and view leave records.
-
-### 🛡️ Administrator Portal
-- **Operational Analytics Dashboard**: Monitor clinic metrics including active doctors, registered patients, today's visit counts, upcoming leaves, and weekly appointment distributions.
-- **Doctor Onboarding**: Register new doctors with specialization details, appointment slot durations (30 min, 45 min, etc.), and default weekly working hours.
-- **Leave Management & Conflict Preview**: Schedule doctor leave with an interactive conflict detection preview that lists all affected patient appointments before saving.
-- **Automated Leave Conflict Resolution**: Automatically cancels conflicting appointments and queues patient alert notifications.
-- **Notification Queue Monitor**: Track background BullMQ job health across Email, Calendar Sync, and AI generation (Sent, Retrying, Failed statuses).
-- **System Audit Log**: Immutable record of all system events (appointments held/confirmed/cancelled, AI summaries generated, calendar syncs, visits recorded).
+CareSync resolves these challenges through:
+- **Concurrency Control**: Database-level unique constraints and short-term slot holds eliminate double-bookings across concurrent patient sessions.
+- **Structured Clinical Intake and AI Triage**: Gathers onset patterns, severity ratings, and associated symptoms while detecting omitted clinical context before the physician begins the consultation.
+- **Longitudinal Care Continuity**: Consolidates past visit notes, diagnostic summaries, and prescription histories into an accessible patient health timeline.
+- **Active Medication Adherence**: Generates scheduled daily dose tracking with interactive logging for patients.
+- **Crash-Resilient Charting**: Equips clinicians with a 30-second patient briefing HUD, prescription presets, and debounced local storage draft persistence.
+- **Worker Observability**: Gives clinic administrators real-time visibility into background BullMQ email dispatch queues, Google Calendar synchronization, and Gemini AI reliability.
 
 ---
 
-## 👥 User Roles
+## Key Features
 
-| Role | Access Level | Permissions & Capabilities |
-|---|---|---|
-| **PATIENT** | Patient Portal | Browse doctors, view real-time slots, hold & book appointments, submit symptoms, view personal appointments, reschedule, cancel, sync to Google Calendar, view notifications. |
-| **DOCTOR** | Doctor Portal | View today's patient queue, inspect AI pre-visit clinical briefs, record consultation visits & prescriptions, trigger post-visit summaries, manage weekly working schedule, view leave history. |
-| **ADMIN** | Admin Portal | View clinic analytics, onboard new doctors, schedule doctor leaves with conflict detection previews, monitor BullMQ notification queue health, inspect system audit logs. |
+### Patient Experience
+- **Doctor Directory and Availability**: Search and filter clinicians by medical specialty and explore real-time availability derived from working hours and scheduled leaves.
+- **5-Minute Slot Hold**: Holds selected slots during intake checkout with a live countdown timer before final booking confirmation.
+- **Smart Symptom Intake**: Captures onset pattern (Gradual vs. Sudden), 1–10 visual severity score, associated symptom tags, and baseline medications/allergies.
+- **Red-Flag Emergency Interceptor**: Evaluates symptom inputs against life-threatening indicators (e.g., acute chest pressure, unilateral neurological deficits) and surfaces immediate emergency care advisories.
+- **Longitudinal Health Timeline**: View chronological records of consultations, clinical diagnoses, and doctor-approved plain-language care plans with one-click follow-up booking bridges.
+- **Medication Adherence Tracker**: Monitor daily prescribed doses, dietary instructions, and log taken/missed medications with an adherence scorecard.
+- **Calendar Synchronization**: Sync confirmed appointments to Google Calendar via OAuth 2.0.
+- **Notification Center**: In-app notifications for confirmations, schedule changes, and doctor leaves.
+
+### Doctor Portal
+- **Daily Queue Management**: Real-time overview of the day's scheduled consultations with visual triage status indicators.
+- **30-Second Patient Briefing HUD**: Instant summary cards displaying chief complaints, triage urgency (Low/Medium/High), red-flag alerts, detected missing clinical context, and 3 suggested diagnostic probe questions.
+- **Consultation and Prescription Recorder**: Record clinical findings, formal diagnoses, and recommended follow-up dates.
+- **Crash-Resilient Auto-Saving**: Automatically saves consultation drafts locally to prevent data loss during browser interruptions.
+- **Prescription Builder and Presets**: Fast-populate standard drug regimens (e.g., Amoxicillin, Paracetamol, Omeprazole, Cetirizine) with automated dose reminder generation.
+- **AI-Powered Patient Summaries**: Translates clinical visit notes into clear, patient-friendly instructions prior to final submission.
+- **Schedule Management**: Manage weekly recurring clinic hours and view approved leave history.
+
+### Administrator Portal
+- **Operational Analytics Dashboard**: Track active clinicians, registered patients, daily visit volumes, upcoming leaves, and weekly consultation distributions.
+- **Clinician Onboarding**: Register new doctors with specialization details, custom appointment durations (20, 30, 45, 60 minutes), and default weekly working hours.
+- **Leave Management and Conflict Detection**: Schedule clinician leaves with automated detection of overlapping patient appointments.
+- **Conflict Resolution**: Cancels conflicting bookings and enqueues automated patient notification alerts.
+- **System and Worker Telemetry HUD**: Live observability across BullMQ email notification queues (Sent, Pending, Retrying, Failed), Google Calendar sync states, and Gemini AI parsing success rates.
+- **System Audit Log**: Immutable append-only audit trail capturing key administrative and clinical actions.
 
 ---
 
-## 🏗️ System Architecture
+## User Roles
 
-CareSync is structured as an npm workspaces monorepo with an architectural principle: **PostgreSQL is the single source of truth; all external services (Email, Google Calendar, LLM) are asynchronous, resilient side-effects.**
+| Role | Access Level | Description and Capabilities |
+| :--- | :--- | :--- |
+| **PATIENT** | Patient Portal | Browse clinicians, book slots, submit structured symptoms, view health timeline, track medication adherence, reschedule/cancel bookings, sync Google Calendar. |
+| **DOCTOR** | Doctor Portal | Manage daily queue, review AI triage briefs, conduct consultations with auto-save notes, issue prescriptions with quick presets, configure weekly schedule. |
+| **ADMIN** | Admin Portal | Monitor clinic operations, onboard clinicians, manage leaves with conflict resolution, inspect background worker telemetry, review system audit logs. |
+
+---
+
+## System Architecture
+
+CareSync is structured as an npm workspaces monorepo where **PostgreSQL serves as the single source of truth**, and all external services (Email, Google Calendar, LLM) operate as asynchronous, resilient dependencies.
 
 ```text
 ┌────────────────────────────────────────────────────────┐
 │                   React 18 SPA (Vite)                  │
-│       (Glassmorphic Design System, Tailwind CSS v4)    │
+│       (Role-Based UI, Tailwind CSS, Clean Typography)  │
 └──────────────────────────┬─────────────────────────────┘
                            │ REST API / JWT
                            ▼
@@ -111,94 +115,89 @@ CareSync is structured as an npm workspaces monorepo with an architectural princ
 └──────────────┘       └───────────────────────────────┘
 ```
 
-### Core Architecture Highlights
-1. **Double-Booking Prevention**: Database-enforced partial unique constraint on `(doctorId, slotStart)` ensures no two active appointments can share the same time slot, even under high concurrency.
-2. **Idempotent Holds**: Booking requests require an `idempotencyKey` to prevent double-charging or duplicate hold creations upon network retries.
-3. **Resilient AI Pipeline**: The Google Gemini API is called with a strict 10-second timeout, JSON schema validation, and automatic fallbacks so external AI latency never blocks booking commits.
-4. **Decoupled Notification Worker**: Transactional emails are dispatched through Redis-backed BullMQ queues with retry backoff policies, preventing third-party SMTP latencies from impacting API response times.
+### Architectural Guarantees
+1. **Concurrency and Double-Booking Prevention**: Database-level unique constraint on `(doctorId, slotStart)` ensures no two appointments share the same time slot under concurrent requests.
+2. **Idempotent Holds**: Appointment booking requests require an `idempotencyKey` to prevent duplicate reservations during network retries.
+3. **Resilient AI Pipeline**: Google Gemini requests execute with structured Zod schema validation, timeouts, and safe fallback generation so AI disruptions never block core booking operations.
+4. **Decoupled Background Processing**: Transactional notifications are queued via BullMQ with exponential backoff retry policies to protect API response latency.
 
 ---
 
-## 💻 Technology Stack
+## Technology Stack
 
 | Layer | Technology | Purpose |
-|---|---|---|
+| :--- | :--- | :--- |
 | **Frontend Framework** | React 18 | Declarative single-page application |
-| **Build Tool** | Vite 5 | Fast development server and optimized production bundling |
-| **Styling** | Tailwind CSS v4 | Utility-first responsive styling and design tokens |
-| **Typography** | Outfit, Inter, JetBrains Mono | Modern typography via Google Fonts |
+| **Build Tool** | Vite 5 | Fast development and optimized production bundling |
+| **Styling** | Tailwind CSS v4 | Responsive utility-based styling and design tokens |
+| **Typography** | Inter, JetBrains Mono | Clean, accessible clinical typography |
 | **Backend Framework** | Express 4 (Node.js) | REST API server |
 | **Language** | TypeScript 5 | End-to-end type safety |
 | **Database** | PostgreSQL | Relational persistence with ACID transactions |
-| **ORM** | Prisma ORM 5 | Type-safe database queries, schema migrations, and seeding |
-| **Job Queue** | BullMQ & Redis | Asynchronous email and background notification processing |
-| **AI / LLM** | Google Gemini 1.5 Flash | Pre-visit clinical triage briefs & post-visit patient summaries |
-| **Calendar** | Google Calendar API (OAuth 2.0) | Appointment synchronization |
-| **Email Service** | Resend API | Transactional notification emails (with local mock fallback) |
-| **Authentication** | Dual JWT + Bcrypt | Access & refresh tokens with bcrypt password hashing |
-| **Validation** | Zod | Request body validation and shared domain schemas |
-| **Testing** | Playwright | Multi-device responsive end-to-end UI testing |
+| **ORM** | Prisma ORM 5 | Schema migrations, type-safe queries, and seeding |
+| **Background Queues** | BullMQ and Redis | Asynchronous notification dispatch and job processing |
+| **Generative AI** | Google Gemini 1.5 Flash | Pre-visit triage summaries and post-visit patient explanations |
+| **Calendar Integration** | Google Calendar API (OAuth 2.0) | Automated appointment event synchronization |
+| **Email Service** | Resend API | Transactional emails with local development fallback |
+| **Authentication** | Dual JWT + Bcrypt | Secure access and refresh tokens with password hashing |
+| **Schema Validation** | Zod | Request body and domain model validation |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 Hospital_application/
 ├── apps/
-│   ├── backend/                     # Express & Prisma Backend API
+│   ├── backend/                     # Express and Prisma Backend API
 │   │   ├── prisma/
 │   │   │   ├── migrations/          # PostgreSQL database migrations
-│   │   │   ├── schema.prisma        # Prisma data models & relations
-│   │   │   └── seed.ts              # Database seeder with demo accounts
+│   │   │   ├── schema.prisma        # Prisma schema and relationship definitions
+│   │   │   └── seed.ts              # Multi-scenario database seeder
 │   │   ├── src/
 │   │   │   ├── controllers/         # Request controllers
-│   │   │   ├── lib/                 # Prisma client singleton
-│   │   │   ├── middlewares/         # Auth, RBAC, and request logger middlewares
+│   │   │   ├── lib/                 # Prisma client instance
+│   │   │   ├── middlewares/         # Authentication, RBAC, and rate limiting
 │   │   │   ├── queues/              # BullMQ queue producers and background workers
 │   │   │   ├── routes/              # Express API route declarations
-│   │   │   ├── services/            # Business logic (Appointments, AI, Admin, etc.)
-│   │   │   └── server.ts            # Express server initialization & CORS config
+│   │   │   ├── services/            # Core business logic (Appointments, AI, Admin, etc.)
+│   │   │   └── server.ts            # Server initialization and middleware configuration
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
-│   └── frontend/                    # Vite + React Single Page Application
+│   └── frontend/                    # Vite and React Frontend Application
 │       ├── src/
 │       │   ├── components/          # Reusable UI components (LoginPage, Shared, Badges)
-│       │   ├── data/                # API client wrapper & mock fallbacks
-│       │   ├── portals/             # Role-based portals (Patient, Doctor, Admin)
-│       │   ├── App.tsx              # Root application router & session manager
-│       │   ├── index.css            # Custom CSS utilities, glassmorphism & typography
-│       │   └── main.tsx             # React entry point
-│       ├── tests/                   # Playwright end-to-end UI audit tests
-│       ├── index.html               # HTML5 application shell
+│       │   ├── data/                # API client and authentication helpers
+│       │   ├── portals/             # PatientPortal, DoctorPortal, AdminPortal
+│       │   ├── App.tsx              # Root session state and view router
+│       │   ├── index.css            # Base styles and layout utilities
+│       │   └── main.tsx             # React DOM entry point
+│       ├── index.html
 │       ├── package.json
-│       ├── playwright.config.ts     # Playwright multi-viewport configuration
 │       ├── tsconfig.json
-│       └── vite.config.ts           # Vite configuration
+│       └── vite.config.ts
 │
 ├── packages/
-│   └── shared/                      # Shared types and Zod schemas
-│       ├── index.ts                 # RoleEnum, AppointmentStatusEnum, AI schemas
+│   └── shared/                      # Shared types and validation schemas
+│       ├── index.ts
 │       └── package.json
 │
-├── .env.example                     # Environment variable template
-├── .gitattributes                   # Line ending normalization
-├── .gitignore                       # Git ignore rules
-├── CONTRIBUTING.md                  # Contribution guidelines
-├── package.json                     # Root monorepo workspace configuration
-└── README.md                        # Project documentation
+├── .env.example                     # Environment configuration template
+├── test_users.md                    # Seeded test accounts and credentials
+├── package.json                     # Monorepo workspace configuration
+└── README.md                        # Documentation
 ```
 
 ---
 
-## 🚀 Installation & Setup
+## Installation and Setup
 
 ### Prerequisites
 - **Node.js**: `v18.0.0` or higher
 - **npm**: `v9.0.0` or higher
-- **PostgreSQL**: `v14` or higher (local or hosted like Supabase / Neon)
-- **Redis**: `v6.0` or higher (local or hosted like Upstash / Redis Cloud)
+- **PostgreSQL**: `v14` or higher (local or hosted)
+- **Redis**: `v6.0` or higher (local or hosted)
 
 ### Step 1: Clone Repository
 ```bash
@@ -216,155 +215,156 @@ Copy `.env.example` to `.env` in the root directory:
 ```bash
 cp .env.example .env
 ```
-Update `.env` with your PostgreSQL database URL, Redis host, and API keys.
+Configure your PostgreSQL URL, Redis host, JWT secrets, and API keys.
 
-### Step 4: Run Database Migrations & Seed Data
+### Step 4: Run Database Migrations and Seed Data
 ```bash
-# Run migrations
-npm run db:migrate
+# Run database migrations
+npm run db:migrate --workspace=apps/backend
 
 # Generate Prisma Client
-npm run db:generate
+npm run db:generate --workspace=apps/backend
 
-# Seed initial demo accounts and appointments
-npm run db:seed
+# Seed database with clinical test scenarios
+npm run db:seed --workspace=apps/backend
 ```
 
 ---
 
-## ⚙️ Environment Configuration
+## Environment Configuration
 
-| Variable | Purpose | Required | Default / Example |
-|---|---|:---:|---|
-| `DATABASE_URL` | PostgreSQL connection string (transaction pooler) | **Yes** | `postgresql://user:pass@localhost:5432/healthcare` |
-| `DIRECT_URL` | Direct PostgreSQL connection string for Prisma migrations | **Yes** | `postgresql://user:pass@localhost:5432/healthcare` |
-| `PORT` | Express backend port | No | `3001` |
-| `FRONTEND_URL` | Allowed frontend origin for CORS policy | No | `http://localhost:8500` |
-| `JWT_ACCESS_SECRET` | Secret used to sign short-lived JWT access tokens | **Yes** | `random-32-char-secret` |
-| `JWT_REFRESH_SECRET` | Secret used to sign long-lived JWT refresh tokens | **Yes** | `random-32-char-secret` |
-| `REDIS_HOST` | Redis server host for BullMQ queues | No | `localhost` |
-| `REDIS_PORT` | Redis server port for BullMQ queues | No | `6379` |
-| `REDIS_URL` | Optional full Redis connection string | No | `redis://localhost:6379` |
-| `RESEND_API_KEY` | Resend API key for transactional email (mock fallback used if unset) | No | `re_your_api_key` |
+| Variable | Description | Required | Example |
+| :--- | :--- | :---: | :--- |
+| `DATABASE_URL` | PostgreSQL connection string | Yes | `postgresql://user:pass@localhost:5432/healthcare` |
+| `DIRECT_URL` | Direct connection string for Prisma migrations | Yes | `postgresql://user:pass@localhost:5432/healthcare` |
+| `PORT` | Backend HTTP port | No | `3001` |
+| `FRONTEND_URL` | Allowed frontend origin for CORS | No | `http://localhost:8500` |
+| `JWT_ACCESS_SECRET` | Secret for signing short-lived JWT access tokens | Yes | `32-character-random-secret` |
+| `JWT_REFRESH_SECRET` | Secret for signing long-lived JWT refresh tokens | Yes | `32-character-random-secret` |
+| `REDIS_HOST` | Redis host for BullMQ workers | No | `localhost` |
+| `REDIS_PORT` | Redis port for BullMQ workers | No | `6379` |
+| `RESEND_API_KEY` | Resend API key for transactional emails | No | `re_your_api_key` |
 | `GEMINI_API_KEY` | Google Gemini API key for clinical AI summaries | No | `your-gemini-key` |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID for Calendar sync | No | `your-client-id.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret for Calendar sync | No | `your-client-secret` |
-| `GOOGLE_REDIRECT_URI` | Google OAuth callback URL | No | `http://localhost:3001/api/calendar/callback` |
+| `GOOGLE_REDIRECT_URI` | Google OAuth redirect callback URL | No | `http://localhost:3001/api/calendar/callback` |
 
 ---
 
-## 🖥️ Running the Application
+## Running the Application
 
 ### Development Mode
 
-Run frontend and backend concurrently:
+Start both backend and frontend development servers concurrently:
 ```bash
 npm run dev
 ```
 
-In a separate terminal window, start the background notification worker:
+In a separate terminal, launch the background notification worker:
 ```bash
-npm run dev:worker
+npm run dev:worker --workspace=apps/backend
 ```
 
-Or start individual services independently:
+Individual services can also be started independently:
 ```bash
-npm run dev:backend   # Starts Express API at http://localhost:3001
-npm run dev:frontend  # Starts Vite frontend at http://localhost:8500
+npm run dev:backend   # Express API running on http://localhost:3001
+npm run dev:frontend  # Vite React App running on http://localhost:8500
 ```
-
-### Pre-Configured Demo Accounts
-
-After running `npm run db:seed`, you can log in with:
-
-| Role | Email | Password | Details |
-|---|---|---|---|
-| **Patient** | `patient@example.com` | `password` | Sarah Mitchell (Pre-seeded appointment records) |
-| **Doctor** | `doctor@example.com` | `password` | Dr. Sarah Chen (Cardiology, pre-seeded today's queue) |
-| **Admin** | `admin@example.com` | `password` | Operations Admin (Full clinic management access) |
 
 ---
 
-## 📚 API Documentation
+## Test Accounts and Credentials
 
-All API endpoints are prefixed with `/api`.
+The database seeder provisions realistic patient and clinician personas across multiple clinical specialties.
 
-### 1. Authentication Endpoints
+**Global Password for all test accounts:** `password`
 
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | Register a new user account (Patient/Doctor/Admin) | Public |
-| `POST` | `/api/auth/login` | Authenticate user & receive access/refresh tokens | Public (Rate Limited) |
-| `POST` | `/api/auth/refresh` | Exchange refresh token for a new access token | Refresh Token |
+| Role | Name | Email | Clinical Context |
+| :--- | :--- | :--- | :--- |
+| **Patient** | Sarah Mitchell | `patient@example.com` | Stage 1 Hypertension with active Lisinopril medication schedule and queue appointment today. |
+| **Patient** | Alex Rivera | `alex@example.com` | Sports performance evaluation and post-workout orthostatic dizziness. |
+| **Patient** | Mia Thompson | `mia@example.com` | Contact dermatitis and migraine with aura consultation records. |
+| **Patient** | David Park *(Parent)* | `david@example.com` | Pediatric allergic asthma care plan and Albuterol prescription. |
+| **Patient** | Fatima Al-Hassan | `fatima@example.com` | Type 2 Diabetes management and quarterly review with Metformin tracking. |
+| **Patient** | Robert Chen | `robert@example.com` | Acute suspected myocardial infarction triggering high-urgency red-flag alerts. |
+| **Doctor** | Dr. Sarah Chen, MD | `doctor@example.com` | Cardiology and Internal Medicine (Active today's patient queue). |
+| **Doctor** | Dr. James Okafor, MD | `okafor@clinic.io` | Pediatrics and Adolescent Medicine. |
+| **Doctor** | Dr. Marco Ricci, MD | `ricci@clinic.io` | Dermatology and Skin Allergy (Active symposium leave on file). |
+| **Doctor** | Dr. Elena Vargas, MD | `vargas@clinic.io` | Neurology and Headache Specialist. |
+| **Doctor** | Dr. Ananya Gupta, MD | `gupta@clinic.io` | General Practice and Preventive Medicine. |
+| **Admin** | Operations Admin | `admin@example.com` | Full administrative, clinician management, and telemetry access. |
 
-### 2. Doctor Endpoints
-
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `GET` | `/api/doctors` | List all doctors with specialization & next available time | Public |
-| `GET` | `/api/doctors/:id/slots?date=YYYY-MM-DD` | Compute available booking slots for a given date | Public |
-| `PUT` | `/api/doctor/schedule` | Update doctor's weekly working hours | `DOCTOR` |
-| `GET` | `/api/doctor/leaves` | Retrieve doctor's personal leave records | `DOCTOR` |
-
-### 3. Appointment Endpoints
-
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `POST` | `/api/appointments` | Hold an appointment slot for 5 minutes (`HELD` status) | `PATIENT` |
-| `POST` | `/api/appointments/:id/confirm` | Confirm a held appointment (`CONFIRMED` status) | `PATIENT` |
-| `GET` | `/api/appointments` | Get logged-in patient's appointment history | `PATIENT` |
-| `GET` | `/api/appointments/today` | Get today's consultation queue for doctor | `DOCTOR` |
-| `GET` | `/api/appointments/:id` | Get single appointment details | `PATIENT` / `DOCTOR` |
-| `DELETE`| `/api/appointments/:id` | Cancel an appointment | `PATIENT` |
-| `PATCH` | `/api/appointments/:id/reschedule` | Reschedule an appointment to a new slot | `PATIENT` |
-| `POST` | `/api/appointments/:id/symptoms` | Submit symptom intake and trigger AI summary | `PATIENT` (IDOR Protected) |
-
-### 4. Visit & Consultation Endpoints
-
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `POST` | `/api/visits` | Record clinical notes, diagnosis & prescriptions | `DOCTOR` |
-| `POST` | `/api/visits/:id/generate-summary` | Generate post-visit patient brief via Gemini AI | `DOCTOR` / `ADMIN` |
-
-### 5. Google Calendar Endpoints
-
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `GET` | `/api/calendar/connect` | Generate Google OAuth 2.0 authorization URL | Public |
-| `GET` | `/api/calendar/callback` | Exchange OAuth code for tokens | Public |
-| `POST` | `/api/appointments/:id/calendar-sync`| Trigger calendar sync for an appointment | `PATIENT` |
-
-### 6. Admin Endpoints
-
-| Method | Endpoint | Purpose | Authentication |
-|---|---|---|---|
-| `GET` | `/api/admin/stats` | Aggregate dashboard statistics & weekly volume | `ADMIN` |
-| `GET` | `/api/admin/doctors` | List all doctors with schedules | `ADMIN` |
-| `POST` | `/api/admin/doctors` | Onboard and create a new doctor | `ADMIN` |
-| `GET` | `/api/admin/leaves` | List all scheduled doctor leaves | `ADMIN` |
-| `POST` | `/api/admin/leaves/conflicts` | Preview conflicting appointments before leave creation | `ADMIN` |
-| `POST` | `/api/admin/leaves` | Schedule leave and cancel conflicting appointments | `ADMIN` |
-| `GET` | `/api/admin/notifications` | View BullMQ notification job statuses | `ADMIN` |
-| `GET` | `/api/admin/audit` | View immutable system audit log | `ADMIN` |
+For detailed scenario descriptions and test flows, see [test_users.md](test_users.md).
 
 ---
 
-## 🔒 Authentication & Authorization
+## API Documentation
 
-- **Dual-Token System**:
-  - **Access Token**: Short-lived JWT (7 days in development) containing `id` and `role`.
-  - **Refresh Token**: Long-lived JWT (30 days) used to silently refresh expired sessions without requiring credentials re-entry.
+All API routes are prefixed with `/api`.
+
+### Authentication
+- `POST /api/auth/register` — Register a new patient or clinician account.
+- `POST /api/auth/login` — Authenticate credentials and receive access/refresh tokens.
+- `POST /api/auth/refresh` — Exchange refresh token for a new access token.
+
+### Doctors and Availability
+- `GET /api/doctors` — List all registered clinicians with specializations and next available slots.
+- `GET /api/doctors/:id/slots?date=YYYY-MM-DD` — Compute open consultation slots for a specific date.
+- `PUT /api/doctor/schedule` — Update clinician weekly working hours (`DOCTOR`).
+- `GET /api/doctor/leaves` — Retrieve clinician personal leave history (`DOCTOR`).
+
+### Appointments and Triage
+- `POST /api/appointments` — Place a 5-minute temporary hold on a time slot (`PATIENT`).
+- `POST /api/appointments/:id/confirm` — Confirm a held appointment (`PATIENT`).
+- `GET /api/appointments` — Retrieve logged-in patient appointment history (`PATIENT`).
+- `GET /api/appointments/today` — Retrieve today's consultation queue for the doctor (`DOCTOR`).
+- `GET /api/appointments/:id` — Retrieve appointment details.
+- `DELETE /api/appointments/:id` — Cancel an appointment.
+- `PATCH /api/appointments/:id/reschedule` — Move an existing appointment to a new time slot.
+- `POST /api/appointments/:id/symptoms` — Submit structured symptom intake and trigger AI triage.
+
+### Longitudinal Care and Adherence
+- `GET /api/patient/timeline` — Retrieve longitudinal patient care feed with diagnoses and follow-ups.
+- `GET /api/patient/medications` — Retrieve active prescriptions and adherence scorecard.
+- `PATCH /api/patient/medications/:id/adherence` — Log medication dose status (`TAKEN` / `MISSED`).
+
+### Consultations and Visits
+- `POST /api/visits` — Record clinical examination findings, diagnosis, and prescription items (`DOCTOR`).
+- `POST /api/visits/:id/generate-summary` — Generate AI patient-friendly consultation summary.
+
+### Google Calendar Integration
+- `GET /api/calendar/connect` — Generate Google OAuth 2.0 authorization URL.
+- `GET /api/calendar/callback` — Handle Google OAuth code exchange.
+- `POST /api/appointments/:id/calendar-sync` — Synchronize appointment event to Google Calendar.
+
+### Administrative Operations and Telemetry
+- `GET /api/admin/stats` — Aggregate operational metrics and weekly appointment distribution (`ADMIN`).
+- `GET /api/admin/doctors` — List all clinicians with schedule configurations (`ADMIN`).
+- `POST /api/admin/doctors` — Onboard a new clinician (`ADMIN`).
+- `GET /api/admin/leaves` — List all clinician leaves (`ADMIN`).
+- `POST /api/admin/leaves/conflicts` — Preview conflicting appointments for a requested leave (`ADMIN`).
+- `POST /api/admin/leaves` — Approve leave and automatically cancel/notify conflicting bookings (`ADMIN`).
+- `GET /api/admin/telemetry` — Live metrics for BullMQ email jobs, Calendar syncs, and Gemini AI triage (`ADMIN`).
+- `GET /api/admin/audit` — Retrieve immutable audit trail (`ADMIN`).
+
+---
+
+## Authentication and Authorization
+
+- **Dual-Token Architecture**:
+  - **Access Token**: Short-lived JWT containing user `id` and `role`.
+  - **Refresh Token**: Long-lived JWT stored securely to renew expired access tokens.
 - **Role-Based Access Control (RBAC)**:
-  - `requireAuth` middleware verifies JWT signatures and attaches the user identity to the Express request.
-  - `requireRole(...roles)` ensures that only designated roles can access specific endpoints.
+  - `requireAuth` verifies JWT authenticity and attaches user context.
+  - `requireRole(...roles)` ensures access is restricted to designated roles.
 - **IDOR Protection**:
-  - Appointment modifications (symptom submissions, cancellations, rescheduling) verify that the authenticated patient owns the record before proceeding.
-- **Rate Limiting**:
-  - `express-rate-limit` protects `/api/auth/login` and `/api/auth/register` against brute-force attacks (max 20 attempts per 15 minutes per IP).
+  - Patient resources (appointments, symptoms, medication logging) verify that the authenticated patient owns the target record.
+- **Brute-Force Protection**:
+  - `express-rate-limit` protects authentication endpoints against credential stuffing (max 20 attempts per 15 minutes per IP).
 
 ---
 
-## 🗄️ Database Schema & Models
+## Database Schema and Models
 
 ```text
 ┌───────────────┐       ┌──────────────────────┐
@@ -393,105 +393,93 @@ All API endpoints are prefixed with `/api`.
                                                    └──────────────────────┘
 ```
 
-### Key Models & Constraints
-1. **`User`**: Base identity with email, password hash, role (`PATIENT`, `DOCTOR`, `ADMIN`).
-2. **`DoctorWorkingHours`**: Weekly recurring availability schedule (Day 0–6, startTime, endTime).
-3. **`DoctorLeave`**: Date ranges when doctor is unavailable.
-4. **`Appointment`**: Core booking model.
-   - **`@@unique([doctorId, slotStart], name: "doctor_slot_unique")`**: Database-level unique index preventing concurrent double-bookings.
-   - Statuses: `HELD`, `CONFIRMED`, `COMPLETED`, `CANCELLED_BY_PATIENT`, `CANCELLED_BY_DOCTOR`, `CANCELLED_BY_LEAVE`, `RESCHEDULED`, `NO_SHOW`, `EXPIRED`.
-5. **`Symptom` & `PreVisitSummary`**: Patient intake text and AI clinical triage brief.
-6. **`Visit` & `PrescriptionItem`**: Clinical notes, diagnoses, and structured medication dosages.
-7. **`MedicationReminder`**: Scheduled timestamps for patient daily medication compliance.
-8. **`NotificationJob`**: BullMQ job tracking state (`PENDING`, `PROCESSING`, `SENT`, `RETRY`, `FAILED_PERMANENTLY`).
-9. **`AuditLog`**: Append-only log of critical system transitions.
+### Core Schema Highlights
+- **`Appointment`**: Contains unique index `@@unique([doctorId, slotStart], name: "doctor_slot_unique")` ensuring absolute concurrency safety.
+- **`PreVisitSummary`**: Stores chief complaints, urgency rankings, red-flag alerts, and missing information gap detection arrays.
+- **`Visit` and `PrescriptionItem`**: Captures clinical examination notes, formal ICD-10 diagnoses, and structured drug instructions.
+- **`MedicationReminder`**: Manages scheduled dose reminder timestamps and adherence states (`PENDING`, `SENT`, `FAILED`).
+- **`NotificationJob`**: Tracks asynchronous background email delivery states (`PENDING`, `PROCESSING`, `SENT`, `RETRY`, `FAILED_PERMANENTLY`).
+- **`AuditLog`**: Append-only log recording critical administrative and clinical events.
 
 ---
 
-## 🔄 Core Application Workflows
+## Core Application Workflows
 
-### 1. Patient Booking & AI Triage Flow
+### 1. Patient Booking and AI Triage Flow
 ```text
-Patient selects Doctor & Date
+Patient selects Clinician & Date
       ↓
-GET /api/doctors/:id/slots (Filtered against DoctorWorkingHours & DoctorLeave)
+GET /api/doctors/:id/slots (Computed against WorkingHours & Leaves)
       ↓
-Patient selects time slot
+Patient selects open time slot
       ↓
 POST /api/appointments (Holds slot for 5 mins; prevents conflicts)
       ↓
-Patient submits Symptoms & Severity
+Patient completes Smart Symptom Intake (Onset, Severity, Associated Symptoms)
       ↓
-POST /api/appointments/:id/symptoms (Gemini 1.5 Flash generates clinical brief)
+POST /api/appointments/:id/symptoms (Gemini 1.5 Flash generates clinical triage brief)
       ↓
-POST /api/appointments/:id/confirm (Marks slot CONFIRMED; queues BullMQ email)
+POST /api/appointments/:id/confirm (Confirms booking; enqueues confirmation email)
 ```
 
-### 2. Doctor Consultation & Medication Follow-Up Flow
+### 2. Clinical Consultation and Medication Tracking Flow
 ```text
 Doctor opens Today's Queue (GET /api/appointments/today)
       ↓
-Doctor inspects AI Pre-Visit Brief (Urgency, Red Flags, Diagnostic Questions)
+Doctor inspects 30-Second AI Briefing HUD (Urgency, Red Flags, Gaps, Questions)
       ↓
-Doctor conducts Consultation
+Doctor conducts Consultation with auto-saving notes and prescription presets
       ↓
-POST /api/visits (Records Clinical Notes, Diagnosis, Prescriptions)
+POST /api/visits (Records Clinical Findings, Diagnosis, Prescriptions)
       ↓
-Backend automatically generates:
-  1. Post-Visit plain language patient brief via Gemini AI
-  2. MedicationReminder records scheduled across prescription duration
+Backend automatically executes:
+  1. Generates plain-language patient summary via Gemini AI
+  2. Generates scheduled MedicationReminder records across duration
   3. Updates Appointment status to COMPLETED
 ```
 
-### 3. Admin Leave Scheduling & Conflict Resolution Flow
+### 3. Admin Leave Management and Conflict Resolution
 ```text
-Admin selects Doctor and Leave Date Range
+Admin selects Clinician and Leave Date Range
       ↓
-POST /api/admin/leaves/conflicts (Queries overlapping confirmed appointments)
+POST /api/admin/leaves/conflicts (Identifies overlapping confirmed bookings)
       ↓
 Admin inspects conflict preview list
       ↓
 POST /api/admin/leaves (Atomic Prisma Transaction):
   1. Creates DoctorLeave record
   2. Cancels conflicting appointments (CANCELLED_BY_LEAVE)
-  3. Enqueues BullMQ cancellation alert emails for affected patients
+  3. Enqueues cancellation alert emails for affected patients
   4. Records action in AuditLog
 ```
 
 ---
 
-## 🛡️ Error Handling & Reliability
+## Error Handling and Reliability
 
-- **Transactional Consistency**: Multi-step operations (slot booking, visit recording, leave cancellation) execute inside `prisma.$transaction` blocks with rollbacks on failure.
-- **Graceful AI Degradation**: If Google Gemini API is unreachable or rate-limited, the system falls back to raw clinical notes without failing the consultation or booking.
-- **Stale Hold Expiration**: When fetching slots, expired `HELD` appointments are automatically garbage-collected and transitioned to `EXPIRED`.
-- **CORS Protection**: Access is strictly limited to authorized frontend origins in production mode.
+- **Database Transactions**: Operations involving multiple state transitions (booking holds, visit submissions, leave cancellations) execute within atomic `prisma.$transaction` blocks.
+- **Graceful AI Degradation**: If Google Gemini API is unavailable or returns an unexpected response, fallback summaries are generated seamlessly without interrupting clinical charting.
+- **Automatic Hold Expiration**: Expired `HELD` slots are automatically released during slot calculation queries.
+- **Resilient Background Retries**: Notification worker implements exponential backoff retries for transient SMTP or network failures.
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## Testing and Quality Assurance
 
-CareSync includes an automated **Playwright** UI test suite that validates critical flows, form validations, empty states, and accessibility across multiple viewports:
-- **Desktop** (1440x900)
-- **Tablet** (768x900)
-- **Mobile** (iPhone 12 / 375x667)
-
-### Run Linting & Type Checking
+### Run Type Checking
 ```bash
-npm run lint
-```
+# Backend type check
+npm run lint --workspace=apps/backend
 
-### Run End-to-End Tests
-Ensure local services are running, then execute:
-```bash
-npm run test:ui
+# Frontend production build validation
+npm run build --workspace=apps/frontend
 ```
 
 ---
 
-## 🚢 Deployment Guidelines
+## Deployment Guidelines
 
-### Monorepo Deployment Overview
+### Monorepo Deployment Targets
 - **Frontend (Vercel / Netlify / Cloudflare Pages)**:
   - Root directory: `apps/frontend`
   - Build command: `npm run build`
@@ -500,31 +488,31 @@ npm run test:ui
   - Root directory: `apps/backend`
   - Build command: `npm run db:generate && tsc`
   - Start command: `node dist/server.js`
-- **Background Worker (Render Background Worker / Railway)**:
+- **Background Worker (Render Worker / Railway)**:
   - Command: `node dist/queues/workers.js`
-- **Database & Cache**:
+- **Database and Redis**:
   - PostgreSQL hosted on Supabase, Neon, or AWS RDS.
   - Redis hosted on Upstash or Redis Cloud.
 
 ---
 
-## ⚠️ Known Limitations
+## Known Limitations
 
-1. **In-Memory Rate Limiting**: The current rate limiter uses memory storage suitable for single-node instances. In a distributed multi-instance deployment, configure `rate-limit-redis`.
-2. **Mock OAuth Fallback**: When `GOOGLE_CLIENT_ID` is not supplied in development, Google Calendar sync returns simulated event IDs for local testing.
-3. **Mock Email Fallback**: When `RESEND_API_KEY` is not provided, transactional emails are logged to the console instead of sending live emails.
-
----
-
-## 🗺️ Future Roadmap
-
-- [ ] **WebSockets / Server-Sent Events (SSE)**: Live real-time doctor queue updates without polling.
-- [ ] **Integrated Telehealth Video**: WebRTC integration for remote patient-doctor video consultations.
-- [ ] **Payment Gateway**: Stripe / Razorpay integration for appointment consultation fee processing.
-- [ ] **Patient Medical Records Upload**: Secure attachment of PDF lab reports and prescription scans.
+1. **In-Memory Rate Limiting**: The default rate limiter uses memory storage suitable for single-node deployments. In multi-instance cluster environments, configure `rate-limit-redis`.
+2. **Development OAuth Fallback**: When `GOOGLE_CLIENT_ID` is omitted in local environments, calendar sync generates simulated event IDs for testing.
+3. **Development Email Fallback**: When `RESEND_API_KEY` is not provided, transactional emails are logged to the console.
 
 ---
 
-## 📄 License
+## Future Roadmap
 
-No license has currently been specified. All rights reserved.
+- [ ] **WebSockets / Server-Sent Events (SSE)**: Real-time doctor queue updates without polling.
+- [ ] **Telehealth Video Integration**: WebRTC integration for remote patient-clinician video consultations.
+- [ ] **Payment Processing**: Stripe / Razorpay integration for online consultation fee settlements.
+- [ ] **Clinical Document Uploads**: Secure storage and parsing for lab reports and medical imagery.
+
+---
+
+## License
+
+All rights reserved. CareSync Healthcare System.

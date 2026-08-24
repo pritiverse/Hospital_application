@@ -6,9 +6,10 @@ const PreVisitSchema = z.object({
   chiefComplaint: z.string().max(300),
   suggestedQuestions: z.array(z.string()).length(3),
   redFlags: z.array(z.string()).optional().default([]),
+  missingInformation: z.array(z.string()).optional().default([]),
 });
 
-const PROMPT_VERSION = 'previsit-v2';
+const PROMPT_VERSION = 'previsit-v3';
 
 const SYSTEM_PROMPT = `You are a clinical decision-support assistant helping doctors prepare for patient consultations.
 Given a patient's symptom description, produce a structured pre-visit brief in JSON format.
@@ -18,14 +19,16 @@ Respond ONLY with valid JSON matching this schema:
   "urgency": "Low" | "Medium" | "High",
   "chiefComplaint": "One sentence clinical framing of the primary complaint (max 200 chars)",
   "suggestedQuestions": ["Question 1", "Question 2", "Question 3"],
-  "redFlags": ["Any red-flag symptoms if present, otherwise empty array"]
+  "redFlags": ["Any red-flag symptoms if present, otherwise empty array"],
+  "missingInformation": ["Key omitted diagnostic context e.g. radiation, fever, onset speed, or empty array"]
 }
 
 Guidelines:
-- urgency: Low = routine, Medium = needs attention, High = potentially serious
+- urgency: Low = routine, Medium = needs attention, High = potentially serious/acute
 - chiefComplaint: clinical language, third-person ("Patient reports…")
 - suggestedQuestions: 3 targeted questions the doctor should ask, specific to the symptoms
-- redFlags: list any potentially serious symptoms mentioned; empty array if none`;
+- redFlags: list any potentially serious symptoms mentioned; empty array if none
+- missingInformation: identify 1-3 clinical details that were NOT specified but are essential for triage (e.g. 'Omitted pain localization or fever status', 'No details on whether symptoms correlate with meals')`;
 
 /** Call the real Gemini API. Falls back gracefully on failure. */
 const callGemini = async (symptomText: string): Promise<string> => {
@@ -132,7 +135,7 @@ export async function generatePreVisitSummary(appointmentId: string, symptomText
 }
 
 function fallbackSummary() {
-  return { urgency: null, chiefComplaint: null, suggestedQuestions: [], redFlags: [], fallback: true };
+  return { urgency: null, chiefComplaint: null, suggestedQuestions: [], redFlags: [], missingInformation: [], fallback: true };
 }
 
 export const PostVisitSchema = z.object({

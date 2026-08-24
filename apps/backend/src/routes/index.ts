@@ -465,4 +465,246 @@ router.get('/admin/audit', requireAuth, requireRole('ADMIN'), async (_req: Reque
   }
 });
 
+// ── Patient Health Timeline & Care Record ─────────────────────────────────────
+
+/** GET /api/patient/timeline — Longitudinal care history */
+router.get('/patient/timeline', requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    const patient = await prisma.patient.findUnique({ where: { userId: user.id } });
+    if (!patient) return res.status(403).json({ error: 'Patient profile not found' });
+
+    const appointments = await prisma.appointment.findMany({
+      where: { patientId: patient.id },
+      orderBy: { slotStart: 'desc' },
+      include: {
+        doctor: { include: { user: { select: { name: true } } } },
+        symptom: true,
+        preVisitSummary: true,
+        visit: {
+          include: { prescriptionItems: true },
+        },
+      },
+    });
+
+    const events = appointments.map((appt) => ({
+      id: appt.id,
+      date: appt.slotStart.toISOString(),
+      doctorName: appt.doctor.user.name,
+      specialization: appt.doctor.specialization,
+      status: appt.status,
+      chiefComplaint: appt.symptom?.rawText || 'Routine consultation',
+      diagnosis: appt.visit?.diagnosis || (appt.status === 'COMPLETED' ? 'Clinical evaluation completed' : null),
+      patientSummary: appt.visit?.patientSummary || null,
+      followUpDate: appt.visit?.followUpDate ? appt.visit.followUpDate.toISOString() : null,
+      prescriptions: appt.visit?.prescriptionItems.map((p) => ({
+        id: p.id,
+        name: p.medicineName,
+        dosage: p.dosage,
+        frequency: p.frequencyPerDay === 1 ? 'Once daily' : p.frequencyPerDay === 2 ? 'Twice daily' : `${p.frequencyPerDay}x daily`,
+        duration: `${p.durationDays} days`,
+        instructions: p.instructions || '',
+      })) || [],
+    }));
+
+    res.json({ events });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Patient Medication Adherence Tracker ─────────────────────────────────────
+
+/** GET /api/patient/medications — Active and historical medications with reminder status */
+router.get('/patient/medications', requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    const patient = await prisma.patient.findUnique({ where: { userId: user.id } });
+    if (!patient) return res.status(403).json({ error: 'Patient profile not found' });
+
+    const visits = await prisma.visit.findMany({
+      where: {
+        appointment: { patientId: patient.id },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        appointment: {
+          include: {
+            doctor: { include: { user: { select: { name: true } } } },
+          },
+        },
+        prescriptionItems: {
+          include: {
+            reminders: {
+              orderBy: { scheduledAt: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    let totalDoses = 0;
+    let takenCount = 0;
+    let missedCount = 0;
+    let pendingCount = 0;
+
+    const medications = visits.flatMap((v) =>
+      v.prescriptionItems.map((item) => {
+        const itemReminders = item.reminders.map((r) => {
+          totalDoses++;
+          if (r.status === 'SENT') takenCount++;
+          else if (r.status === 'FAILED') missedCount++;
+          else pendingCount++;
+
+          return {
+            id: r.id,
+            scheduledAt: r.scheduledAt.toISOString(),
+            status: r.status, // PENDING | SENT | FAILED
+            takenAt: r.sentAt ? r.sentAt.toISOString() : null,
+          };
+        });
+
+        // Compute item-level adherence
+        const itemTaken = item.reminders.filter((r) => r.status === 'SENT').length;
+        const itemTotal = item.reminders.length;
+        const itemAdherence = itemTotal > 0 ? Math.round((itemTaken / itemTotal) * 100) : 100;
+
+        return {
+          id: item.id,
+          medicineName: item.medicineName,
+          dosage: item.dosage,
+          frequencyPerDay: item.frequencyPerDay,
+          durationDays: item.durationDays,
+          startDate: item.startDate.toISOString(),
+          instructions: item.instructions || 'Take as directed with water',
+          doctorName: v.appointment.doctor.user.name,
+          adherenceRate: itemAdherence,
+          reminders: itemReminders,
+        };
+      })
+    );
+
+    const overallAdherence = totalDoses > 0 ? Math.round((takenCount / (takenCount + missedCount || 1)) * 100) : 100;
+
+    res.json({
+      medications,
+      adherenceStats: {
+        totalDoses,
+        taken: takenCount,
+        missed: missedCount,
+        pending: pendingCount,
+        adherenceRate: overallAdherence,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** PATCH /api/patient/medications/:id/adherence — Log a dose as TAKEN or MISSED */
+router.patch('/patient/medications/:id/adherence', requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    const patient = await prisma.patient.findUnique({ where: { userId: user.id } });
+    if (!patient) return res.status(403).json({ error: 'Patient profile not found' });
+
+    const reminderId = req.params.id;
+    const { status } = req.body; // 'SENT' (Taken) | 'FAILED' (Missed) | 'PENDING'
+
+    const reminder = await prisma.medicationReminder.findUnique({
+      where: { id: reminderId },
+      include: {
+        prescriptionItem: {
+          include: {
+            visit: {
+              include: { appointment: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!reminder) return res.status(404).json({ error: 'Reminder dose not found' });
+    if (reminder.prescriptionItem.visit.appointment.patientId !== patient.id) {
+      return res.status(403).json({ error: 'Unauthorized to update this dose' });
+    }
+
+    const updated = await prisma.medicationReminder.update({
+      where: { id: reminderId },
+      data: {
+        status: status === 'TAKEN' || status === 'SENT' ? 'SENT' : status === 'MISSED' || status === 'FAILED' ? 'FAILED' : 'PENDING',
+        sentAt: status === 'TAKEN' || status === 'SENT' ? new Date() : null,
+      },
+    });
+
+    res.json({ success: true, reminder: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Admin Telemetry & Background Job Health ──────────────────────────────────
+
+/** GET /api/admin/telemetry — Comprehensive system and background queue observability */
+router.get('/admin/telemetry', requireAuth, requireRole('ADMIN'), async (_req: Request, res: Response) => {
+  try {
+    // Email notification metrics
+    const [emailPending, emailSent, emailRetry, emailFailed] = await Promise.all([
+      prisma.notificationJob.count({ where: { status: 'PENDING' } }),
+      prisma.notificationJob.count({ where: { status: 'SENT' } }),
+      prisma.notificationJob.count({ where: { status: 'RETRY' } }),
+      prisma.notificationJob.count({ where: { status: 'FAILED_PERMANENTLY' } }),
+    ]);
+    const emailTotal = emailPending + emailSent + emailRetry + emailFailed;
+
+    // LLM health metrics
+    const [llmSuccess, llmPending, llmInvalid, llmFailed] = await Promise.all([
+      prisma.preVisitSummary.count({ where: { status: 'SUCCESS' } }),
+      prisma.preVisitSummary.count({ where: { status: 'PENDING' } }),
+      prisma.preVisitSummary.count({ where: { status: 'INVALID_SCHEMA' } }),
+      prisma.preVisitSummary.count({ where: { status: 'FAILED' } }),
+    ]);
+
+    // Calendar sync metrics
+    const [calSynced, calPending, calFailed] = await Promise.all([
+      prisma.appointment.count({ where: { calendarSyncStatus: 'SYNCED' } }),
+      prisma.appointment.count({ where: { calendarSyncStatus: 'PENDING' } }),
+      prisma.appointment.count({ where: { calendarSyncStatus: 'FAILED' } }),
+    ]);
+
+    res.json({
+      uptimeSeconds: Math.floor(process.uptime()),
+      dbStatus: 'CONNECTED',
+      queues: {
+        email: {
+          total: emailTotal,
+          pending: emailPending,
+          sent: emailSent,
+          retrying: emailRetry,
+          failed: emailFailed,
+          healthScore: emailTotal > 0
+            ? Math.round((emailSent / emailTotal) * 100)
+            : 100,
+        },
+        calendarSync: {
+          synced: calSynced,
+          pending: calPending,
+          failed: calFailed,
+        },
+        aiTriage: {
+          success: llmSuccess,
+          pending: llmPending,
+          invalidSchema: llmInvalid,
+          failed: llmFailed,
+          successRate: (llmSuccess + llmInvalid + llmFailed) > 0
+            ? Math.round((llmSuccess / (llmSuccess + llmInvalid + llmFailed)) * 100)
+            : 100,
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
