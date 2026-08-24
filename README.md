@@ -1,5 +1,9 @@
 # CareSync — Healthcare Appointment & Follow-Up Management System
 
+**Production Application:** [https://hospital-application-frontend.vercel.app](https://hospital-application-frontend.vercel.app/)  
+**Backend API Service:** [https://caresync-backend-fk7j.onrender.com](https://caresync-backend-fk7j.onrender.com/)  
+**API Health Check:** [https://caresync-backend-fk7j.onrender.com/health](https://caresync-backend-fk7j.onrender.com/health)
+
 CareSync is an enterprise-grade healthcare management and clinical scheduling platform built with React, Node.js, Express, Prisma ORM, PostgreSQL, BullMQ, and Google Gemini Generative AI.
 
 It streamlines clinical workflows by combining concurrency-safe slot reservations, AI-assisted pre-visit symptom triage, clinical gap detection, doctor consultation recording with crash-resilient charting, automated medication adherence tracking, and background worker telemetry into a unified, role-based application.
@@ -560,12 +564,13 @@ Respond ONLY with valid JSON matching this schema:
 
 ## Deliverables Matrix
 
-| Deliverable | Location in Repository | Description |
+| Deliverable | Location / URL | Description |
 | :--- | :--- | :--- |
-| **1. Source Code** | `apps/backend/`, `apps/frontend/`, `packages/shared/` | Complete monorepo source code for API, UI, queues, and database migrations. |
-| **2. Setup and Documentation** | `README.md`, `.env.example` | Comprehensive setup guide, environment specs, API reference, DB schema, and Google Calendar instructions. |
-| **3. Test Personas and Credentials** | `test_users.md` | Pre-seeded login credentials for patients, clinicians, and administrators. |
-| **4. System Design Write-Up** | `system_design.md` | Focused technical document (<800 words) covering double-booking prevention, leave conflict resolution, slot holds, and notification reliability. |
+| **1. Complete Source Code** | `apps/backend/`, `apps/frontend/`, `packages/shared/` | Monorepo source code for React SPA, Express API, Prisma models, BullMQ queues, and domain types. |
+| **2. Setup & Configuration** | `README.md`, `.env.example` | Setup guide, environment variables, API reference, DB schema, LLM prompts, and Google Calendar instructions. |
+| **3. Hosted Application URL** | **[https://hospital-application-frontend.vercel.app](https://hospital-application-frontend.vercel.app/)** | Live cloud production deployment connected to Render backend, Supabase PostgreSQL, and Upstash Redis. |
+| **4. System Design Write-Up** | [`system_design.md`](system_design.md) | Technical architecture document (<800 words) covering double-booking prevention, leave conflict resolution, slot holds, and notification failure resilience. |
+| **5. Test User Credentials** | [`test_users.md`](test_users.md) | Directory of all pre-seeded patient, doctor, and admin personas with passwords and clinical test cases. |
 
 ---
 
