@@ -43,9 +43,30 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Health and root endpoints
+app.get('/', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'CareSync Healthcare Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      doctors: '/api/doctors',
+      auth: '/api/auth/login',
+    },
+  });
+});
+
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
 // Mount routes
 app.use('/api', routes);
-
 
 app.listen(PORT, () => {
   console.log(`Backend server listening on port ${PORT}`);

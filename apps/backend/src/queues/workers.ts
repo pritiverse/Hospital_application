@@ -1,10 +1,30 @@
 import { Worker } from 'bullmq';
 import prisma from '../lib/prisma';
 
-const connection = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
+const getRedisConnection = () => {
+  if (process.env.REDIS_URL) {
+    try {
+      const url = new URL(process.env.REDIS_URL);
+      return {
+        host: url.hostname,
+        port: parseInt(url.port || '6379'),
+        username: url.username || undefined,
+        password: url.password || undefined,
+        tls: url.protocol === 'rediss:' ? { rejectUnauthorized: false } : undefined,
+        maxRetriesPerRequest: null,
+      };
+    } catch {
+      // fallback to host/port
+    }
+  }
+  return {
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    maxRetriesPerRequest: null,
+  };
 };
+
+const connection = getRedisConnection();
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -125,6 +145,10 @@ worker.on('failed', async (job, err) => {
       data: { status: 'FAILED_PERMANENTLY' },
     });
   }
+});
+
+worker.on('error', (err) => {
+  console.warn(`[BullMQ Worker] Connection note: ${err.message}`);
 });
 
 console.log('CareSync Notification Worker is running...');
