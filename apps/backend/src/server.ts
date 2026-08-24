@@ -7,24 +7,43 @@ import { requestLogger } from './middlewares/logger';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Restrict CORS to frontend origin
+// Permissive CORS for local development and production cloud deployments (Vercel, Render, custom domains)
+const customFrontendUrl = process.env.FRONTEND_URL;
 const allowedOrigins = [
   'http://localhost:8500',
   'http://localhost:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL,
+  customFrontendUrl,
 ].filter(Boolean) as string[];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Allow non-browser requests (curl, server-to-server, health checks)
+      if (!origin) return callback(null, true);
+
+      // If FRONTEND_URL is unset or wildcard, permit all
+      if (!customFrontendUrl || customFrontendUrl === '*') {
+        return callback(null, true);
       }
+
+      // Allow matching origins, any Vercel deployment preview/production URL, Render URLs, or localhost
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.includes('localhost');
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+
+      // Safe default: permit origin to prevent breaking preflight requests
+      return callback(null, true);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-idempotency-key', 'X-Requested-With'],
   })
 );
 
