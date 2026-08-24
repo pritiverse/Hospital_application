@@ -1,0 +1,28 @@
+{
+  "name": "healthcare-appointment-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack Healthcare Appointment & Follow-Up Management System with AI-assisted clinical summaries and background notification queues.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @healthcare/backend\" \"npm run dev -w @healthcare/frontend\"",
+    "dev:backend": "npm run dev -w @healthcare/backend",
+    "dev:frontend": "npm run dev -w @healthcare/frontend",
+    "dev:worker": "npm run dev:worker -w @healthcare/backend",
+    "build": "npm run build -w @healthcare/frontend",
+    "db:migrate": "npm run db:migrate -w @healthcare/backend",
+    "db:generate": "npm run db:generate -w @healthcare/backend",
+    "db:seed": "npm run db:seed -w @healthcare/backend",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test:ui": "playwright test -c apps/frontend/playwright.config.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@healthcare/shared",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "lint": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

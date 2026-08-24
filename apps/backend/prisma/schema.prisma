@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role // PATIENT | DOCTOR | ADMIN
+  name         String
+  createdAt    DateTime @default(now())
+  patient      Patient?
+  doctor       Doctor?
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+model Patient {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id])
+  phone        String?
+  appointments Appointment[]
+}
+
+model Doctor {
+  id              String               @id @default(uuid())
+  userId          String               @unique
+  user            User                 @relation(fields: [userId], references: [id])
+  specialization  String
+  slotDurationMin Int                  @default(30)
+  workingHours    DoctorWorkingHours[]
+  leaves          DoctorLeave[]
+  appointments    Appointment[]
+
+  @@index([specialization])
+}
+
+model DoctorWorkingHours {
+  id        String @id @default(uuid())
+  doctorId  String
+  doctor    Doctor @relation(fields: [doctorId], references: [id])
+  dayOfWeek Int // 0-6
+  startTime String // "09:00"
+  endTime   String // "17:00"
+
+  @@index([doctorId, dayOfWeek])
+}
+
+model DoctorLeave {
+  id        String   @id @default(uuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([doctorId, startDate, endDate])
+}
+
+model Appointment {
+  id                   String            @id @default(uuid())
+  patientId            String
+  patient              Patient           @relation(fields: [patientId], references: [id])
+  doctorId             String
+  doctor               Doctor            @relation(fields: [doctorId], references: [id])
+  slotStart            DateTime
+  slotEnd              DateTime
+  status               AppointmentStatus @default(HELD)
+  holdExpiresAt        DateTime?
+  googleEventIdPatient String?
+  googleEventIdDoctor  String?
+  calendarSyncStatus   SyncStatus        @default(PENDING)
+  calendarSyncError    String?
+  idempotencyKey       String?           @unique
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  symptom         Symptom?
+  preVisitSummary PreVisitSummary?
+  visit           Visit?
+  notifications   NotificationJob[]
+
+  // THE critical constraint — DB-level double-booking prevention
+  @@unique([doctorId, slotStart], name: "doctor_slot_unique")
+  @@index([doctorId, slotStart])
+  @@index([patientId, status])
+}
+
+enum AppointmentStatus {
+  HELD
+  CONFIRMED
+  COMPLETED
+  CANCELLED_BY_PATIENT
+  CANCELLED_BY_DOCTOR
+  CANCELLED_BY_LEAVE
+  RESCHEDULED
+  NO_SHOW
+  EXPIRED
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+}
+
+model Symptom {
+  id            String      @id @default(uuid())
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  rawText       String
+  durationDays  Int?
+  severity      String?
+  createdAt     DateTime    @default(now())
+}
+
+model PreVisitSummary {
+  id                 String      @id @default(uuid())
+  appointmentId      String      @unique
+  appointment        Appointment @relation(fields: [appointmentId], references: [id])
+  urgency            String? // Low | Medium | High | null on failure
+  chiefComplaint     String?
+  suggestedQuestions Json? // string[3]
+  redFlags           Json?
+  status             LlmStatus   @default(PENDING)
+  promptVersion      String
+  model              String
+  rawResponse        String? // for traceability/debugging
+  generatedAt        DateTime?
+  errorMessage       String?
+}
+
+enum LlmStatus {
+  PENDING
+  SUCCESS
+  INVALID_SCHEMA
+  FAILED
+}
+
+model Visit {
+  id                   String             @id @default(uuid())
+  appointmentId        String             @unique
+  appointment          Appointment        @relation(fields: [appointmentId], references: [id])
+  clinicalNotes        String
+  diagnosis            String?
+  followUpDate         DateTime?
+  patientSummary       String? // LLM output
+  patientSummaryStatus LlmStatus          @default(PENDING)
+  createdAt            DateTime           @default(now())
+  prescriptionItems    PrescriptionItem[]
+}
+
+model PrescriptionItem {
+  id              String               @id @default(uuid())
+  visitId         String
+  visit           Visit                @relation(fields: [visitId], references: [id])
+  medicineName    String
+  dosage          String
+  frequencyPerDay Int
+  durationDays    Int
+  startDate       DateTime
+  instructions    String?
+  reminders       MedicationReminder[]
+}
+
+model MedicationReminder {
+  id                 String           @id @default(uuid())
+  prescriptionItemId String
+  prescriptionItem   PrescriptionItem @relation(fields: [prescriptionItemId], references: [id])
+  scheduledAt        DateTime
+  status             ReminderStatus   @default(PENDING)
+  sentAt             DateTime?
+
+  @@index([scheduledAt, status])
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model NotificationJob {
+  id            String       @id @default(uuid())
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  recipientId   String
+  type          String // BOOKING_CONFIRMED | REMINDER | CANCELLED | LEAVE_AFFECTED | RESCHEDULED
+  channel       String // EMAIL
+  status        JobStatus    @default(PENDING)
+  attemptCount  Int          @default(0)
+  maxAttempts   Int          @default(5)
+  nextAttemptAt DateTime     @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  RETRY
+  FAILED_PERMANENTLY
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+}

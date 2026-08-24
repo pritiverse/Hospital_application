@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+node_modules_backup/
+.pnp
+.pnp.js
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*
+!.env.example
+
+# Build & Compilation Outputs
+dist/
+build/
+out/
+generated/
+
+# Caches & Temporary Files
+.cache/
+.vite/
+.turbo/
+*.tsbuildinfo
+.tmp/
+*.tmp
+
+# Testing & Coverage Reports
+test-results/
+ui-audit-report/
+playwright-report/
+coverage/
+.last-run.json
+blob-report/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & Editor Metadata
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Tool-specific & Agent Caches
+.agents/
+.claude/
+.windsurf/
+.figma/
