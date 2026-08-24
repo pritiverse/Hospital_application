@@ -2,15 +2,22 @@ import { Worker } from 'bullmq';
 import prisma from '../lib/prisma';
 
 const getRedisConnection = () => {
-  if (process.env.REDIS_URL) {
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
     try {
-      const url = new URL(process.env.REDIS_URL);
+      const normalized = redisUrl.startsWith('https://')
+        ? redisUrl.replace('https://', 'rediss://')
+        : redisUrl;
+      const url = new URL(normalized);
+      const isTls = url.protocol === 'rediss:' || redisUrl.startsWith('https://');
+      const password = url.password || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_PASSWORD || undefined;
+      const username = url.username || (password ? 'default' : undefined);
       return {
         host: url.hostname,
         port: parseInt(url.port || '6379'),
-        username: url.username || undefined,
-        password: url.password || undefined,
-        tls: url.protocol === 'rediss:' ? { rejectUnauthorized: false } : undefined,
+        username,
+        password,
+        tls: isTls ? { rejectUnauthorized: false } : undefined,
         maxRetriesPerRequest: null,
       };
     } catch {
@@ -20,6 +27,7 @@ const getRedisConnection = () => {
   return {
     host: process.env.REDIS_HOST || '127.0.0.1',
     port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD || process.env.UPSTASH_REDIS_REST_TOKEN || undefined,
     maxRetriesPerRequest: null,
   };
 };
